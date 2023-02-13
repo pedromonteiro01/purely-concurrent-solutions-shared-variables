@@ -5,6 +5,6 @@ int main() {
     printf("char: ");
     scanf("%s", c);
 
-    printf("utf-8 code: %x%x\n", c[0], c[1]);
+    printf("utf-8 code: %X%X\n", c[0], c[1]);
     return 0;
 }
