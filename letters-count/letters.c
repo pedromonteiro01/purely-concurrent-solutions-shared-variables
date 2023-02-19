@@ -3,20 +3,27 @@
 
 #define NUM_LETTERS 26
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 2) {
+        printf("%s <text> \n", argv[0]);
+        return 1; // error, no input text
+    }
+
     int letter_count[NUM_LETTERS] = {0};
     int bytes = 0;
-    int c;
+    char *text = argv[1];
 
     // read input byte by byte  
-    while ((c = getchar()) != EOF) {
+    while (*text) {
         bytes++;
 
-        if (isalpha(c)) {
-            int index = tolower(c) - 'a';
+        if (isalpha(*text)) { // checks whether a character is an alphabet
+            int index = tolower(*text) - 'a';
             letter_count[index]++;
         }
+
+        text++;
     }
 
     printf("Total bytes: %d\n", bytes);
