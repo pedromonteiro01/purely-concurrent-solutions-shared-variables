@@ -4,63 +4,46 @@
 
 #define NUM_VOWELS 6
 
-int is_word_character(char c) {
-    return isalnum(c) || c == '_';
+void utf8ToLowercase(char* buffer) {
+    // Copy the 4 bytes to a temporary buffer
+    char temp[4];
+    memcpy(temp, buffer, 4);
+    
+    // Convert each byte to lowercase
+    temp[0] = tolower(temp[0]);
+    temp[1] = tolower(temp[1]);
+    temp[2] = tolower(temp[2]);
+    temp[3] = tolower(temp[3]);
+
+    // Copy the bytes back to the original buffer
+    memcpy(buffer, temp, 4);
 }
 
-int is_word_boundary(char c) {
-    return isspace(c) || ispunct(c);
-}
-
-char normalize_character(char c) {
-    return tolower(c);
+void normalize_character(char* buffer) {
+    utf8ToLowercase(buffer);
 }
 
 // Counts the total number of words and the number of words containing each vowel in the given file
 void count_words(FILE *file, int *total_words, int *vowel_count) {
-    char buffer[1]; // buffer to store the byte read from the file
-    char word[256]; // Buffer to hold a word
-    int in_word = 0; // Flag indicating whether we are currently in a word
-    int word_length = 0; // Length of the current word
+    char buffer[4]; // buffer to store the byte read from the file
 
+    // read one byte at a time until the end of the file is reached
     while (fread(buffer, 1, 1, file) == 1) {
-        printf("%c", buffer[0]);
-        continue;
-
-        if (is_word_character(buffer[0])) {
-            if (!in_word) { // If we were not already in a word
-                in_word = 1; // Set the flag to indicate we are now in a word
-                word_length = 0;
+        // check if the byte uses a 4-byte encoding
+        if ((buffer[0] & 0xF8) == 0xF0) {
+            // read the next 3 bytes
+            if (fread(buffer + 1, 1, 3, file) != 3) {
+                printf("Error reading file\n");
+                return;
             }
-
-            word[word_length++] = normalize_character(buffer[0]); // Add the normalized character to the current word buffer
-        } else if (in_word) { // If the character is not a word character and we were in a word
-            in_word = 0; // Clear the flag to indicate we are no longer in a word
-            word[word_length] = '\0'; // Null-terminate the current word buffer
-
-            (*total_words)++;
-
-            // Count the vowels in the current word
-            for (int i = 0; i < word_length; i++) {
-                buffer[0] = normalize_character(word[i]);
-
-                if (buffer[0] == 'a') {
-                    vowel_count[0]++;
-                } else if (buffer[0] == 'e') {
-                    vowel_count[1]++;
-                } else if (buffer[0] == 'i') {
-                    vowel_count[2]++;
-                } else if (buffer[0] == 'o') {
-                    vowel_count[3]++;
-                } else if (buffer[0] == 'u') {
-                    vowel_count[4]++;
-                }
-            }
+            // print the 4-byte character
+            normalize_character(buffer);
+            printf("%c%c%c%c", buffer[0], buffer[1], buffer[2], buffer[3]);
         }
-    }
-
-    if (in_word) { // If we were in a word at the end of the file
-        (*total_words)++; // Increment the total word count
+        else {
+            // print the 1-byte character
+            printf("%c", buffer[0]);
+        }
     }
 }
 
