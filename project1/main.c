@@ -1,58 +1,126 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
-#define NUM_LETTERS 26
+#define NUM_VOWELS 5
 
-long parallel_char_reader(char *text, int *letter_frequency)
-{
-    long bytes = 0;
-
-    // read input byte by byte  
-    while (*text) {
-        if (isalpha(*text)) { // checks whether a character is an alphabet
-            int index = tolower(*text) - 'a';
-            letter_frequency[index]++;
-        }
-
-        text++;
-        bytes++;
-    }
-
-    return bytes;
+int is_word_character(char c) {
+    return isalnum(c) || c == '_';
 }
 
-int main(int argc, char *argv[])
-{
-    // Validate input arguments
+int is_word_boundary(char c) {
+    return isspace(c) || ispunct(c);
+}
+
+char normalize_character(char c) {
+    switch (tolower(c)) {
+        case 'á':
+        case 'à':
+        case 'â':
+        case 'ã':
+            return 'a';
+        case 'é':
+        case 'è':
+        case 'ê':
+            return 'e';
+        case 'í':
+        case 'ì':
+            return 'i';
+        case 'ó':
+        case 'ò':
+        case 'ô':
+        case 'õ':
+            return 'o';
+        case 'ú':
+        case 'ù':
+            return 'u';
+        case 'ç':
+            return 'c';
+        default:
+            return tolower(c);
+    }
+}
+
+// Counts the total number of words and the number of words containing each vowel in the given file
+void count_words(FILE *file, int *total_words, int *vowel_count) {
+    char word[256]; // Buffer to hold a word
+    int in_word = 0; // Flag indicating whether we are currently in a word
+    int word_length = 0; // Length of the current word
+
+    while (!feof(file)) {
+        char c = fgetc(file); // Read a character from the file
+
+        if (is_word_character(c)) {
+            if (!in_word) { // If we were not already in a word
+                in_word = 1; // Set the flag to indicate we are now in a word
+                word_length = 0;
+            }
+
+            word[word_length++] = normalize_character(c); // Add the normalized character to the current word buffer
+        } else if (in_word) { // If the character is not a word character and we were in a word
+            in_word = 0; // Clear the flag to indicate we are no longer in a word
+            word[word_length] = '\0'; // Null-terminate the current word buffer
+
+            (*total_words)++;
+
+            // Count the vowels in the current word
+            for (int i = 0; i < word_length; i++) {
+                char c = normalize_character(word[i]);
+
+                if (c == 'a') {
+                    vowel_count[0]++;
+                } else if (c == 'e') {
+                    vowel_count[1]++;
+                } else if (c == 'i') {
+                    vowel_count[2]++;
+                } else if (c == 'o') {
+                    vowel_count[3]++;
+                } else if (c == 'u') {
+                    vowel_count[4]++;
+                }
+            }
+        }
+    }
+
+    if (in_word) { // If we were in a word at the end of the file
+        (*total_words)++; // Increment the total word count
+    }
+}
+
+
+int main(int argc, char *argv[]) {
+    /* --------- Check that at least one file is provided as an argument -------- */
     if (argc < 2) {
-        printf("%s <text> \n", argv[0]);
+        printf("Usage: %s <file1> [<file2> ...]\n", argv[0]);
         return 1;
     }
 
-    /* -------------------- Declare and initialize variables -------------------- */
-    char *text = argv[1];
-    
-    //'{0}' initializes all the elements in the array to 0.
-    int letter_frequency[NUM_LETTERS] = {0};
-    /* -------------------------------------------------------------------------- */
+    int total_words = 0;
+    int vowel_count[NUM_VOWELS] = {0};
 
+    /* ----- Loop through all the file arguments and count the words in them ---- */
+    for (int i = 1; i < argc; i++) {
+        FILE *file = fopen(argv[i], "r");
 
-    /* -------------- Calls function to read chars from input text -------------- */
-    long bytes = parallel_char_reader(text, letter_frequency);
+        if (file == NULL) {
+            printf("Could not open file: %s\n", argv[i]);
+            continue;
+        }
 
+        // Count the words in the file and update the total word count and vowel count arrays
+        count_words(file, &total_words, vowel_count);
 
-    /* -------------------------------------------------------------------------- */
-    /*                               Prints results                               */
-    /* -------------------------------------------------------------------------- */
-    printf("Bytes read: %ld\n\nLetter Frequency:\n", bytes);
-
-    // Print letter frequency table
-    for (int i = 0; i < NUM_LETTERS; i++) {
-        char letter = 'a' + i;
-        printf("%c: %d, ", letter, letter_frequency[i]);
+        fclose(file);
     }
+    /* -------------------------------------------------------------------------- */
 
-    printf("\n");
+    printf("Total words: %d\n", total_words);
+
+    // Print the count of words containing each vowel
+    char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u'};
+    for (int i = 0; i < NUM_VOWELS; i++) {
+        printf("Words containing '%c': %d\n", vowels[i], vowel_count[i]);
+    }
 
     return 0;
 }
