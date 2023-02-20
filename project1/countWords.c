@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#define NUM_VOWELS 5
+#define NUM_VOWELS 6
 
 int is_word_character(char c) {
     return isalnum(c) || c == '_';
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     printf("Total words: %d\n", total_words);
 
     // Print the count of words containing each vowel
-    char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u'};
+    char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u', 'y'};
     for (int i = 0; i < NUM_VOWELS; i++) {
         printf("Words containing '%c': %d\n", vowels[i], vowel_count[i]);
     }
