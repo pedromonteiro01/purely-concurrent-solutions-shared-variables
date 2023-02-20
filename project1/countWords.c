@@ -13,32 +13,7 @@ int is_word_boundary(char c) {
 }
 
 char normalize_character(char c) {
-    switch (tolower(c)) {
-        case 'á':
-        case 'à':
-        case 'â':
-        case 'ã':
-            return 'a';
-        case 'é':
-        case 'è':
-        case 'ê':
-            return 'e';
-        case 'í':
-        case 'ì':
-            return 'i';
-        case 'ó':
-        case 'ò':
-        case 'ô':
-        case 'õ':
-            return 'o';
-        case 'ú':
-        case 'ù':
-            return 'u';
-        case 'ç':
-            return 'c';
-        default:
-            return tolower(c);
-    }
+
 }
 
 // Counts the total number of words and the number of words containing each vowel in the given file
