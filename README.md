@@ -2,10 +2,10 @@
 
 Compile
 ```c
-gcc -o example.exe example.c
+cd project1 && make
 ```
 
 Run
 ```c
-./example.exe
+./program
 ```
