@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -g -O3
 
 all: program
 
-program: main.c
+program: countWords.c
 	$(CC) $(CFLAGS) -o countWords countWords.c
 
 clean:
