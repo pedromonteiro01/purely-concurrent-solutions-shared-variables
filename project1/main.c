@@ -3,7 +3,7 @@
 
 #define NUM_LETTERS 26
 
-long ParallelCharReader(char *text, int *letterFrequency)
+long parallel_char_reader(char *text, int *letter_frequency)
 {
     long bytes = 0;
 
@@ -11,7 +11,7 @@ long ParallelCharReader(char *text, int *letterFrequency)
     while (*text) {
         if (isalpha(*text)) { // checks whether a character is an alphabet
             int index = tolower(*text) - 'a';
-            letterFrequency[index]++;
+            letter_frequency[index]++;
         }
 
         text++;
@@ -33,12 +33,12 @@ int main(int argc, char *argv[])
     char *text = argv[1];
     
     //'{0}' initializes all the elements in the array to 0.
-    int letterFrequency[NUM_LETTERS] = {0};
+    int letter_frequency[NUM_LETTERS] = {0};
     /* -------------------------------------------------------------------------- */
 
 
     /* -------------- Calls function to read chars from input text -------------- */
-    long bytes = ParallelCharReader(text, letterFrequency);
+    long bytes = parallel_char_reader(text, letter_frequency);
 
 
     /* -------------------------------------------------------------------------- */
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     // Print letter frequency table
     for (int i = 0; i < NUM_LETTERS; i++) {
         char letter = 'a' + i;
-        printf("%c: %d, ", letter, letterFrequency[i]);
+        printf("%c: %d, ", letter, letter_frequency[i]);
     }
 
     printf("\n");
