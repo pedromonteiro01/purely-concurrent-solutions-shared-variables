@@ -80,6 +80,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
     size_t num_bytes = 0;
     char buffer[4]; // buffer to store the byte read from the file
     char word[256]; // Buffer to hold a word
+    int counted_vowel[6] = {0}; // Initialize all flags to false
     int in_word = 0; // Flag indicating whether we are currently in a word
     int word_length = 0; // Length of the current word
 
@@ -113,6 +114,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
             if (!in_word) { // If we were not already in a word
                 in_word = 1; // Set the flag to indicate we are now in a word
                 word_length = 0;
+                memset(counted_vowel, 0, sizeof(counted_vowel)); // Reset all flags to false
             }
 
             word[word_length++] = buffer[0]; // Add the character to the current word buffer
@@ -122,21 +124,27 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
 
             (*total_words)++;
 
-            // Count the vowels in the current word
+            // Count the first occurence of a vowel in the current word
             for (int i = 0; i < word_length; i++) {
                 buffer[0] = word[i];
 
-                if (buffer[0] == 'a') {
+                if (buffer[0] == 'a' && !counted_vowel[0]) {
+                    counted_vowel[0] = 1;
                     vowel_count[0]++;
-                } else if (buffer[0] == 'e') {
+                } else if (buffer[0] == 'e' && !counted_vowel[1]) {
+                    counted_vowel[1] = 1;
                     vowel_count[1]++;
-                } else if (buffer[0] == 'i') {
+                } else if (buffer[0] == 'i' && !counted_vowel[2]) {
+                    counted_vowel[2] = 1;
                     vowel_count[2]++;
-                } else if (buffer[0] == 'o') {
+                } else if (buffer[0] == 'o' && !counted_vowel[3]) {
+                    counted_vowel[3] = 1;
                     vowel_count[3]++;
-                } else if (buffer[0] == 'u') {
+                } else if (buffer[0] == 'u' && !counted_vowel[4]) {
+                    counted_vowel[4] = 1;
                     vowel_count[4]++;
-                } else if (buffer[0] == 'y') {
+                } else if (buffer[0] == 'y' && !counted_vowel[5]) {
+                    counted_vowel[5] = 1;
                     vowel_count[5]++;
                 }
             }
