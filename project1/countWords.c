@@ -21,32 +21,86 @@ void utf8ToLowercase(char* buffer) {
 
 void normalize_character(char* buffer) {
     utf8ToLowercase(buffer);
+
+    /* This code shifts the first byte to the left by 8 bits and then ORs it with the second byte.
+       The resulting value is an unsigned integer that represents the two-byte sequence. */
+    unsigned int value = ((unsigned char)buffer[0] << 8) | (unsigned char)buffer[1];
+    
+    switch (value) {
+        case 0xC3A0: // à
+        case 0xC3A1: // á
+        case 0xC3A2: // â
+        case 0xC3A3: // ã
+        case 0xC3A4: // ä
+            buffer[0] = 0x61; // a
+            break;
+        case 0xC3A8: // è
+        case 0xC3A9: // é
+        case 0xC3AA: // ê
+        case 0xC3AB: // ë
+            buffer[0] = 0x65; // e
+            break;
+        case 0xC3AC: // ì
+        case 0xC3AD: // í
+        case 0xC3AE: // î
+        case 0xC3AF: // ï
+            buffer[0] = 0x69; // i
+            break;
+        case 0xC3B2: // ò
+        case 0xC3B3: // ó
+        case 0xC3B4: // ô
+        case 0xC3B5: // õ
+        case 0xC3B6: // ö
+            buffer[0] = 0x6f; // o
+            break;
+        case 0xC3B9: // ù
+        case 0xC3BA: // ú
+        case 0xC3BB: // û
+        case 0xC3BC: // ü
+            buffer[0] = 0x75; // u
+            break;
+        case 0xC3BD: // ý
+        case 0xC3BF: // ÿ
+            buffer[0] = 0x79; // y
+            break;
+    }
 }
+
 
 // Counts the total number of words and the number of words containing each vowel in the given file
 void count_words(FILE *file, int *total_words, int *vowel_count) {
+    size_t num_bytes = 0;
     char buffer[4]; // buffer to store the byte read from the file
 
     // read one byte at a time until the end of the file is reached
     while (fread(buffer, 1, 1, file) == 1) {
-        // check if the byte uses a 4-byte encoding
-        if ((buffer[0] & 0xF8) == 0xF0) {
-            // read the next 3 bytes
-            if (fread(buffer + 1, 1, 3, file) != 3) {
+    // check if the byte uses a multi-byte encoding
+        if ((buffer[0] & 0x80) == 0x80) {
+            // determine the number of bytes in the encoding
+
+            if ((buffer[0] & 0xE0) == 0xC0) {
+                num_bytes = 2;
+            } else if ((buffer[0] & 0xF0) == 0xE0) {
+                num_bytes = 3;
+            } else if ((buffer[0] & 0xF8) == 0xF0) {
+                num_bytes = 4;
+            } else {
+                printf("Invalid UTF-8 sequence detected\n");
+                return;
+            }
+
+            // read the remaining bytes of the encoding
+            if (fread(buffer + 1, 1, num_bytes - 1, file) != num_bytes - 1) {
                 printf("Error reading file\n");
                 return;
             }
-            // print the 4-byte character
-            normalize_character(buffer);
-            printf("%c%c%c%c", buffer[0], buffer[1], buffer[2], buffer[3]);
         }
-        else {
-            // print the 1-byte character
-            printf("%c", buffer[0]);
-        }
+
+        // process the character
+        normalize_character(buffer);
+        printf("%c\n", buffer[0]);
     }
 }
-
 
 int main(int argc, char *argv[]) {
     /* --------- Check that at least one file is provided as an argument -------- */
