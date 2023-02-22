@@ -63,6 +63,9 @@ void normalize_character(char* buffer) {
         case 0xC3BF: // ÿ
             buffer[0] = 0x79; // y
             break;
+        case 0xC3A7: // ç
+            buffer[0] = 0x63; // c
+            break;
     }
 }
 
@@ -98,7 +101,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
 
         // process the character
         normalize_character(buffer);
-        printf("%c\n", buffer[0]);
+        printf("%c", buffer[0]);
     }
 }
 
