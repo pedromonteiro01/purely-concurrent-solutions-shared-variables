@@ -1,78 +1,75 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define NUM_VOWELS 6
 
-int is_word_character(char c) {
-    return isalnum(c) || c == '_';
+int is_word_character(char* c) {
+    wchar_t wc;
+    mbtowc(&wc, c, 4);
+    return isalnum(wc) || wc == L'\'' || wc == L'\u2018' || wc == L'\u2019';
 }
 
-int is_word_boundary(char c) {
-    return isspace(c) || ispunct(c);
-}
-
-void utf8ToLowercase(char* buffer) {
-    // Copy the 4 bytes to a temporary buffer
-    char temp[4];
-    memcpy(temp, buffer, 4);
-    
-    // Convert each byte to lowercase
-    temp[0] = tolower(temp[0]);
-    temp[1] = tolower(temp[1]);
-    temp[2] = tolower(temp[2]);
-    temp[3] = tolower(temp[3]);
-
-    // Copy the bytes back to the original buffer
-    memcpy(buffer, temp, 4);
+int is_separator(char* c) {
+    wchar_t wc;
+    mbtowc(&wc, c, 4);
+    return wc == L'\u2013' || wc == L'\u2026';
 }
 
 void normalize_character(char* buffer) {
-    utf8ToLowercase(buffer);
-
     /* This code shifts the first byte to the left by 8 bits and then ORs it with the second byte.
        The resulting value is an unsigned integer that represents the two-byte sequence. */
     unsigned int value = ((unsigned char)buffer[0] << 8) | (unsigned char)buffer[1];
     
     switch (value) {
-        case 0xC3A0: // à
-        case 0xC3A1: // á
-        case 0xC3A2: // â
-        case 0xC3A3: // ã
-        case 0xC3A4: // ä
-            buffer[0] = 0x61; // a
+        case 0xC3A0:  // à
+        case 0xC3A1:  // á
+        case 0xC3A2:  // â
+        case 0xC3A3:  // ã
+        case 0xC380:  // À
+        case 0xC381:  // Á
+        case 0xC382:  // Â
+        case 0xC383:  // Ã
+            buffer[0] = 0x61;  // a
             break;
-        case 0xC3A8: // è
-        case 0xC3A9: // é
-        case 0xC3AA: // ê
-        case 0xC3AB: // ë
-            buffer[0] = 0x65; // e
+        case 0xC3A8:  // è
+        case 0xC3A9:  // é
+        case 0xC3AA:  // ê
+        case 0xC388:  // È
+        case 0xC389:  // É
+        case 0xC38A:  // Ê
+            buffer[0] = 0x65;  // e
             break;
-        case 0xC3AC: // ì
-        case 0xC3AD: // í
-        case 0xC3AE: // î
-        case 0xC3AF: // ï
-            buffer[0] = 0x69; // i
+        case 0xC3AC:  // ì
+        case 0xC3AD:  // í
+        case 0xC38C:  // Ì
+        case 0xC38D:  // Í
+            buffer[0] = 0x69;  // i
             break;
-        case 0xC3B2: // ò
-        case 0xC3B3: // ó
-        case 0xC3B4: // ô
-        case 0xC3B5: // õ
-        case 0xC3B6: // ö
-            buffer[0] = 0x6f; // o
+        case 0xC3B2:  // ò
+        case 0xC3B3:  // ó
+        case 0xC3B4:  // ô
+        case 0xC3B5:  // õ
+        case 0xC392:  // Ò
+        case 0xC393:  // Ó
+        case 0xC394:  // Ô
+        case 0xC395:  // Õ
+            buffer[0] = 0x6f;  // o
             break;
-        case 0xC3B9: // ù
-        case 0xC3BA: // ú
-        case 0xC3BB: // û
-        case 0xC3BC: // ü
-            buffer[0] = 0x75; // u
+        case 0xC3B9:  // ù
+        case 0xC3BA:  // ú
+        case 0xC399:  // Ù
+        case 0xC39A:  // Ú
+            buffer[0] = 0x75;  // u
             break;
-        case 0xC3BD: // ý
-        case 0xC3BF: // ÿ
-            buffer[0] = 0x79; // y
+        case 0xC3A7:  // ç
+        case 0xC387:  // Ç
+            buffer[0] = 0x63;  // c
             break;
-        case 0xC3A7: // ç
-            buffer[0] = 0x63; // c
+        case 0xE280A6:  // horizontal ellipsis
+        case 0xE28093:  // en dash
+            buffer[0] = 0x20;  // space
             break;
     }
 }
@@ -112,7 +109,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         normalize_character(buffer);
         printf("%c", buffer[0]);
 
-        if (is_word_character(buffer[0])) {
+        if (is_word_character(buffer) && !is_separator(buffer)) {
             if (!in_word) { // If we were not already in a word
                 in_word = 1; // Set the flag to indicate we are now in a word
                 word_length = 0;
