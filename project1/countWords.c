@@ -8,6 +8,7 @@
 int is_word_character(char* c) {
     wchar_t wc;
     mbtowc(&wc, c, 4);
+
     return isalnum(wc) || wc == L'\'' || wc == L'\u2018' || wc == L'\u2019';
 }
 
@@ -99,15 +100,24 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         }
 
         // process the character
-        if (num_bytes == 1) {
+        if (num_bytes == 1) { // no need to normalize, only convert to lower case
             buffer[0] = tolower(buffer[0]);
+
         }
-        else if (num_bytes == 2) {
+        else if (num_bytes == 2) { // normalize character
             normalize_character(buffer);
+
         } else if (num_bytes > 2) {
-            buffer[0] = 0x20;
+            /* --------- handle 3 byte utf-8 char edge cases -------- */
+
+            //chars with 3 bytes and the last byte being 0x98 and 0x99 are apostrophes
+            if (buffer[2] == (char) 0x98 || buffer[2] == (char) 0x99)
+                buffer[0] = 0x27; // convert to regular apostrophe
+            else
+                buffer[0] = 0x20; // convert to delimiter char
+            
         }
-        //printf("%c", buffer[0]);
+        printf("%c", buffer[0]);
 
         if (is_word_character(buffer)) {
             if (!in_word) { // If we were not already in a word
