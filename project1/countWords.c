@@ -11,12 +11,6 @@ int is_word_character(char* c) {
     return isalnum(wc) || wc == L'\'' || wc == L'\u2018' || wc == L'\u2019';
 }
 
-int is_separator(char* c) {
-    wchar_t wc;
-    mbtowc(&wc, c, 4);
-    return wc == L'\u2013' || wc == L'\u2026';
-}
-
 void normalize_character(char* buffer) {
     /* This code shifts the first byte to the left by 8 bits and then ORs it with the second byte.
        The resulting value is an unsigned integer that represents the two-byte sequence. */
@@ -113,8 +107,9 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         } else if (num_bytes > 2) {
             buffer[0] = 0x20;
         }
+        //printf("%c", buffer[0]);
 
-        if (is_word_character(buffer) && !is_separator(buffer)) {
+        if (is_word_character(buffer)) {
             if (!in_word) { // If we were not already in a word
                 in_word = 1; // Set the flag to indicate we are now in a word
                 word_length = 0;
