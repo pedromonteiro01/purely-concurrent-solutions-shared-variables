@@ -180,23 +180,25 @@ int main(int argc, char *argv[]) {
         count_words(file, &total_words, vowel_count);
 
         fclose(file);
+
+        printf("Total number of words = %d\nN. of words with an\n", total_words);
+
+        // Print the count of words containing each vowel
+        char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u', 'y'};
+
+        for (int i = 0; i < NUM_VOWELS; i++) {
+            printf("%5c ", toupper(vowels[i]));
+        }
+
+        printf("\n");
+
+        for (int i = 0; i < NUM_VOWELS; i++) {
+            printf("%5d ", vowel_count[i]);
+        }
+
+        printf("\n\n");
+
     }
-    /* -------------------------------------------------------------------------- */
-    printf("Total number of words = %d\n", total_words);
-
-    // Print the count of words containing each vowel
-    char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u', 'y'};
-    for (int i = 0; i < NUM_VOWELS; i++) {
-        printf("%5c ", vowels[i]);
-    }
-
-    printf("\n");
-
-    for (int i = 0; i < NUM_VOWELS; i++) {
-        printf("%5d ", vowel_count[i]);
-    }
-
-    printf("\n");
 
     return 0;
 }
