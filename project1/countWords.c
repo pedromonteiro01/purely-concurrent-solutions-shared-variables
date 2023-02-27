@@ -110,12 +110,15 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         } else if (num_bytes > 2) {
             /* --------- handle 3 byte utf-8 char edge cases -------- */
 
-            //chars with 3 bytes and the last byte being 0x98 and 0x99 are apostrophes
-            if (buffer[2] == (char) 0x98 || buffer[2] == (char) 0x99)
-                buffer[0] = 0x27; // convert to regular apostrophe
-            else
-                buffer[0] = 0x20; // convert to delimiter char
-            
+            switch (buffer[2]) {
+                case (char) 0x98:  // Left Single Quotation Mark
+                case (char) 0x99:  // Right Single Quotation Mark
+                    buffer[0] = 0x27;  // regular apostrophe
+                    break;
+                default:
+                    buffer[0] = 0x20; // space
+                    break;
+            }
         }
         printf("%c", buffer[0]);
 
