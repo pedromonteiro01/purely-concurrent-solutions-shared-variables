@@ -107,8 +107,11 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         }
 
         // process the character
-        normalize_character(buffer);
-        //printf("%c", buffer[0]);
+        if (num_bytes == 2) {
+            normalize_character(buffer);
+        } else if (num_bytes > 2) {
+            buffer[0] = 0x20;
+        }
 
         if (is_word_character(buffer) && !is_separator(buffer)) {
             if (!in_word) { // If we were not already in a word
