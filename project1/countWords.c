@@ -108,7 +108,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
 
         // process the character
         normalize_character(buffer);
-        printf("%c", buffer[0]);
+        //printf("%c", buffer[0]);
 
         if (is_word_character(buffer) && !is_separator(buffer)) {
             if (!in_word) { // If we were not already in a word
@@ -175,20 +175,28 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        printf("File name: %s\n", argv[i]);
         // Count the words in the file and update the total word count and vowel count arrays
         count_words(file, &total_words, vowel_count);
 
         fclose(file);
     }
     /* -------------------------------------------------------------------------- */
-
-    printf("Total words: %d\n", total_words);
+    printf("Total number of words = %d\n", total_words);
 
     // Print the count of words containing each vowel
     char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u', 'y'};
     for (int i = 0; i < NUM_VOWELS; i++) {
-        printf("Words containing '%c': %d\n", vowels[i], vowel_count[i]);
+        printf("%5c ", vowels[i]);
     }
+
+    printf("\n");
+
+    for (int i = 0; i < NUM_VOWELS; i++) {
+        printf("%5d ", vowel_count[i]);
+    }
+
+    printf("\n");
 
     return 0;
 }
