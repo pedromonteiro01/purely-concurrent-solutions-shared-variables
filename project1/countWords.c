@@ -62,7 +62,11 @@ void normalize_character(char* buffer) {
         case 0xC387:  // Ç
             buffer[0] = 0x63;  // c
             break;
-    }
+        case 0xC2AB: // Left-Pointing Double Angle Quotation Mark
+        case 0xC2BB: // Right-Pointing Double Angle Quotation Mark
+            buffer[0] = 0x20; // Apostrophe
+            break;
+        }
 }
 
 
@@ -115,10 +119,11 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
                 case (char) 0x99:  // Right Single Quotation Mark
                     buffer[0] = 0x27;  // regular apostrophe
                     break;
-                default:
+                case (char) 0xa6: // Horizontal Ellipsis
+                case (char) 0x93: // En Dash
                     buffer[0] = 0x20; // space
                     break;
-            }
+                }
         }
         printf("%c", buffer[0]);
 
