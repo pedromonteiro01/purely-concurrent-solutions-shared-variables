@@ -167,11 +167,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int total_words = 0;
-    int vowel_count[NUM_VOWELS] = {0};
-
     /* ----- Loop through all the file arguments and count the words in them ---- */
     for (int i = 1; i < argc; i++) {
+        int total_words = 0;
+        int vowel_count[NUM_VOWELS] = {0};
         FILE *file = fopen(argv[i], "rb"); // open the file in binary mode
 
         if (file == NULL) {
