@@ -21,7 +21,7 @@ void normalize_character(char* buffer) {
     /* This code shifts the first byte to the left by 8 bits and then ORs it with the second byte.
        The resulting value is an unsigned integer that represents the two-byte sequence. */
     unsigned int value = ((unsigned char)buffer[0] << 8) | (unsigned char)buffer[1];
-    
+
     switch (value) {
         case 0xC3A0:  // à
         case 0xC3A1:  // á
@@ -67,10 +67,6 @@ void normalize_character(char* buffer) {
         case 0xC387:  // Ç
             buffer[0] = 0x63;  // c
             break;
-        case 0xE280A6:  // horizontal ellipsis
-        case 0xE28093:  // en dash
-            buffer[0] = 0x20;  // space
-            break;
     }
 }
 
@@ -85,6 +81,8 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
     int word_length = 0; // Length of the current word
 
     while (fread(buffer, 1, 1, file) == 1) {
+        num_bytes = 1;
+
         // check if the byte uses a multi-byte encoding
         if ((buffer[0] & 0x80) == 0x80) {
             // determine the number of bytes in the encoding
@@ -156,7 +154,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
 
     if (in_word) { // If we were in a word at the end of the file
         (*total_words)++; // Increment the total word count
-    }
+    }    
 }
 
 int main(int argc, char *argv[]) {
