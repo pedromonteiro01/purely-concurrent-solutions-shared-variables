@@ -105,7 +105,10 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         }
 
         // process the character
-        if (num_bytes == 2) {
+        if (num_bytes == 1) {
+            buffer[0] = tolower(buffer[0]);
+        }
+        else if (num_bytes == 2) {
             normalize_character(buffer);
         } else if (num_bytes > 2) {
             buffer[0] = 0x20;
