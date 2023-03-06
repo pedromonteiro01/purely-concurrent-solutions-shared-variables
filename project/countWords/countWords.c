@@ -103,22 +103,16 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         // process the character
         if (num_bytes == 1) { // no need to normalize, only convert to lower case
             buffer[0] = tolower(buffer[0]);
-
         }
         else if (num_bytes == 2) { // normalize character
             normalize_character(buffer);
 
         } else if (num_bytes > 2) {
             /* --------- handle 3 byte utf-8 char edge cases -------- */
-
             switch (buffer[2]) {
                 case (char) 0x98:  // Left Single Quotation Mark
                 case (char) 0x99:  // Right Single Quotation Mark
                     buffer[0] = 0x27;  // regular apostrophe
-                    break;
-                case (char) 0xa6: // Horizontal Ellipsis
-                case (char) 0x93: // En Dash
-                    buffer[0] = 0x20; // space
                     break;
                 }
         }
