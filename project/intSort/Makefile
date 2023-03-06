@@ -3,8 +3,8 @@ CFLAGS = -Wall -Wextra -g -O3
 
 all: program
 
-program: sort.c
-	$(CC) $(CFLAGS) -o sort sort.c
+program: intSort.c
+	$(CC) $(CFLAGS) -o intSort intSort.c
 
 clean:
 	rm -f program
