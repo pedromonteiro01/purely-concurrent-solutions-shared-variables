@@ -6,10 +6,7 @@
 #define NUM_VOWELS 6
 
 int is_word_character(char* c) {
-    wchar_t wc;
-    mbtowc(&wc, c, 4);
-
-    return isalnum(wc) || wc == L'\'' || wc == L'\u2018' || wc == L'\u2019';
+    return isalpha(*c) || *c == '\'';
 }
 
 void normalize_character(char* buffer) {
