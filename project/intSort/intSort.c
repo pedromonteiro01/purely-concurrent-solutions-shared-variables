@@ -1,115 +1,156 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void merge(int arr[], int l, int m, int r)
+// Merges two sorted subarrays
+void merge(int *arr, int left, int middle, int right)
 {
     int i, j, k;
-    int n1 = m - l + 1;
-    int n2 = r - m;
 
-    int L[n1], R[n2]; // create temporary arrays
+    // Find sizes of two subarrays
+    int left_size = middle - left + 1;
+    int right_size = right - middle;
 
-    // copy data to temporary arrays
-    for (i = 0; i < n1; i++)
-        L[i] = arr[l + i];
-    for (j = 0; j < n2; j++)
-        R[j] = arr[m + 1 + j];
+    // Create temporary arrays for left and right subarrays
+    int *left_arr = malloc(left_size * sizeof(int));
+    int *right_arr = malloc(right_size * sizeof(int));
 
-    i = 0; // initial index of first subarray
-    j = 0; // initial index of second subarray
-    k = l; // initial index of merged subarray
-
-    while (i < n1 && j < n2)
+    // Copy data to temporary arrays
+    for (i = 0; i < left_size; i++)
     {
-        if (L[i] <= R[j])
+        left_arr[i] = arr[left + i];
+    }
+    for (j = 0; j < right_size; j++)
+    {
+        right_arr[j] = arr[middle + 1 + j];
+    }
+
+    // Merge the two subarrays into arr
+    i = 0;
+    j = 0;
+    k = left;
+    while (i < left_size && j < right_size)
+    {
+        if (left_arr[i] <= right_arr[j])
         {
-            arr[k] = L[i];
+            arr[k] = left_arr[i];
             i++;
         }
         else
         {
-            arr[k] = R[j];
+            arr[k] = right_arr[j];
             j++;
         }
         k++;
     }
 
-    // copy remaining elements of L
-    while (i < n1)
+    // Copy remaining elements of left subarray, if any
+    while (i < left_size)
     {
-        arr[k] = L[i];
+        arr[k] = left_arr[i];
         i++;
         k++;
     }
 
-    // copy remaining elements of R
-    while (j < n2)
+    // Copy remaining elements of right subarray, if any
+    while (j < right_size)
     {
-        arr[k] = R[j];
+        arr[k] = right_arr[j];
         j++;
         k++;
     }
+
+    // Free temporary arrays
+    free(left_arr);
+    free(right_arr);
 }
 
-void mergeSort(int arr[], int l, int r)
+// Recursive function to sort array using merge sort
+void mergeSort(int *arr, int left, int right)
 {
-    if (l < r)
+    if (left < right)
     {
-        // same as (l+r)/2, but avoids overflow for large l and h
-        int m = l + (r - l) / 2;
-
-        // sort first and second halves
-        mergeSort(arr, l, m);
-        mergeSort(arr, m + 1, r);
-
-        // merge the sorted halves
-        merge(arr, l, m, r);
+        int middle = left + (right - left) / 2;
+        mergeSort(arr, left, middle);
+        mergeSort(arr, middle + 1, right);
+        merge(arr, left, middle, right);
     }
 }
 
+// Function to print the sorted array
+void printArray(int *arr, int size)
+{
+    int i;
+    for (i = 0; i < size; i++)
+    {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+}
+
+void validateSort(int *arr, int N)
+{
+    int i;
+
+    for (i = 0; i < N - 1; i++)
+    {
+        if (arr[i] > arr[i + 1])
+        {
+            printf("Error in position %d between element %d and %d\n", i, arr[i], arr[i + 1]);
+            break;
+        }
+        if (i == (N - 1))
+            printf("Everything is OK!\n");
+    }
+}
+
+// Main function to test merge sort algorithm
 int main(int argc, char *argv[])
 {
+    int *arr, size, count;
+
     if (argc != 2)
     {
         printf("Usage: %s <filename>\n", argv[0]);
         return 1;
     }
 
-    // read integers from binary file
     FILE *file = fopen(argv[1], "rb");
     if (file == NULL) // check if file is empty
     {
-        perror("Error opening file");
+        printf("Error opening file\n");
         return 1;
     }
 
-    int n_values;
-    fread(&n_values, sizeof(int), 1, file); // read number of values from the file (first int in the file)
-    printf("Number of values: %d\n", n_values);
+    fseek(file, 0, SEEK_END);
+    size = ftell(file) / sizeof(int);
+    fseek(file, 0, SEEK_SET);
 
-    // allocate memory with size of number of values
-    int *arr = (int *)malloc(n_values * sizeof(int));
+    arr = malloc(size * sizeof(int));
+
     if (arr == NULL)
     {
-        perror("Error allocating memory for the array");
+        printf("Error: cannot allocate memory\n");
         return 1;
     }
 
-    fread(arr, sizeof(int), n_values, file); // read the rest of the integers
-    fclose(file);
+    count = fread(arr, sizeof(int), size, file);
 
-    // apply merge sort
-    mergeSort(arr, 0, n_values - 1);
-
-    for (int i = 0; i < n_values; i++)
+    if (count != size)
     {
-        printf("%d ", arr[i]);
+        printf("Error: could not read all integers from file\n");
+        return 1;
     }
 
-    printf("\n");
+    fclose(file);
 
-    // free memory
+    // int arr_size = sizeof(arr) / sizeof(int);
+
+    mergeSort(arr, 0, size - 1);
+    validateSort(arr, size);
+
+    printf("\nSorted array:\n");
+    printArray(arr, size);
+
     free(arr);
-
     return 0;
 }
