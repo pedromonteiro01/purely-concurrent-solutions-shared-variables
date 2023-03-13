@@ -7,4 +7,4 @@ program: intSort.c
 	$(CC) $(CFLAGS) -o intSort intSort.c
 
 clean:
-	rm -f program
+	rm -f intSort

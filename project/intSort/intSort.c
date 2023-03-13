@@ -80,6 +80,9 @@ void mergeSort(int *arr, int left, int right)
 void printArray(int *arr, int size)
 {
     int i;
+        
+    printf("\nSorted array:\n");
+
     for (i = 0; i < size; i++)
     {
         printf("%d ", arr[i]);
@@ -98,7 +101,7 @@ void validateSort(int *arr, int N)
             printf("Error in position %d between element %d and %d\n", i, arr[i], arr[i + 1]);
             break;
         }
-        if (i == (N - 1))
+        if (i == (N - 2))
             printf("Everything is OK!\n");
     }
 }
@@ -121,10 +124,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    fseek(file, 0, SEEK_END);
-    size = ftell(file) / sizeof(int);
-    fseek(file, 0, SEEK_SET);
-
+    // read the first int of the file and save it to the variable 'size'. 
+    // The first int indicates the number of elements to be sorted.
+    count = fread(&size, sizeof(int), 1, file);
     arr = malloc(size * sizeof(int));
 
     if (arr == NULL)
@@ -142,13 +144,9 @@ int main(int argc, char *argv[])
     }
 
     fclose(file);
-
-    // int arr_size = sizeof(arr) / sizeof(int);
-
     mergeSort(arr, 0, size - 1);
     validateSort(arr, size);
 
-    printf("\nSorted array:\n");
     printArray(arr, size);
 
     free(arr);

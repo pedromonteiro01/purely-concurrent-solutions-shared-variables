@@ -11,9 +11,9 @@
             "name": "gcc.exe - Build and debug active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/countWords",
+            "program": "${fileDirname}/intSort",
               // There I have got error Property keys must be doublequotedjsonc
-            "args": ["${fileDirname}/dataSet1/text0.txt"],
+            "args": ["${fileDirname}/datSeq32.bin"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
