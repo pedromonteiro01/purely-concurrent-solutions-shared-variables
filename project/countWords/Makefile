@@ -1,10 +1,19 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -O3
+CFLAGS = -Wall -Wextra -Werror -g -O3
+LDFLAGS = -lpthread
+TARGET = main
 
-all: program
+SRCS = main.c ../utils/file_splitter.c
+OBJS = $(SRCS:.c=.o)
 
-program: countWords.c
-	$(CC) $(CFLAGS) -o countWords countWords.c
+all: $(TARGET)
 
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.PHONY: clean
 clean:
-	rm -f program
+	rm -f $(OBJS) $(TARGET)
