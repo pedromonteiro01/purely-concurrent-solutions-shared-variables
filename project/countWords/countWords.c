@@ -119,7 +119,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
                     break;
                 }
         }
-        //printf("%c", buffer[0]);
+        printf("%c", buffer[0]);
 
         if (is_word_character(buffer, in_word)) {
             if (!in_word) { // If we were not already in a word
@@ -162,14 +162,15 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
     }
 }
 
+/*
 int main(int argc, char *argv[]) {
-    /* --------- Check that at least one file is provided as an argument -------- */
+    // --------- Check that at least one file is provided as an argument --------
     if (argc < 2) {
         printf("Usage: %s <file1> [<file2> ...]\n", argv[0]);
         return 1;
     }
 
-    /* ----- Loop through all the file arguments and count the words in them ---- */
+    // ----- Loop through all the file arguments and count the words in them ----
     for (int i = 1; i < argc; i++) {
         int total_words = 0;
         int vowel_count[NUM_VOWELS] = {0};
@@ -207,3 +208,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+*/

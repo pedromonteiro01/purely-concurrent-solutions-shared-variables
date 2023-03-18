@@ -1,6 +1,7 @@
 // main.c
 
 #include "../utils/file_splitter.h"
+#include "countWords.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,25 +13,41 @@
 // Define a struct to pass arguments to worker threads.
 typedef struct WorkerArgs {
     int id;
-    ChunkQueue* queue;
+    Chunk** chunks;
+    int total_chunks;
 } WorkerArgs;
+
+
+#include <stdio.h>
+
+void print_binary_contents(const unsigned char* data, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        printf("%c", data[i]);
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
 
 // Worker thread function.
 void* worker(void* args) {
     WorkerArgs* worker_args = (WorkerArgs*)args;
     int worker_id = worker_args->id;
-    ChunkQueue* queue = worker_args->queue;
+    Chunk** chunks = worker_args->chunks;
+    int total_chunks = worker_args->total_chunks;
 
-    // Process chunks in the queue.
-    Chunk* chunk = queue->head;
-    while (chunk != NULL) {
+    // Process alternate chunks in the array.
+    for (int i = worker_id; i < total_chunks; i += NUM_WORKERS) {
+        Chunk* chunk = chunks[i];
         printf("Worker %d processing chunk with size %zu bytes\n", worker_id, chunk->size);
-        // Add your processing logic here.
-        chunk = chunk->next;
+        // processing logic
+        print_binary_contents(chunk->data, chunk->size);
     }
 
     return NULL;
 }
+
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -47,8 +64,9 @@ int main(int argc, char* argv[]) {
         printf("Processing file: %s\n", argv[i]);
 
         // Split the binary file into chunks.
-        ChunkQueue* queue = split_file_into_chunks(argv[i]);
-        if (!queue) {
+        int total_chunks;
+        Chunk** chunks = split_file_into_chunks(argv[i], &total_chunks);
+        if (!chunks) {
             printf("Failed to split file: %s\n", argv[i]);
             continue;
         }
@@ -56,7 +74,8 @@ int main(int argc, char* argv[]) {
         // Assign chunks to worker threads.
         for (int j = 0; j < NUM_WORKERS; j++) {
             worker_args[j].id = j;
-            worker_args[j].queue = queue;
+            worker_args[j].chunks = chunks;
+            worker_args[j].total_chunks = total_chunks;
             pthread_create(&worker_threads[j], NULL, worker, &worker_args[j]);
         }
 
@@ -65,8 +84,8 @@ int main(int argc, char* argv[]) {
             pthread_join(worker_threads[j], NULL);
         }
 
-        // Free the memory allocated for the ChunkQueue.
-        free_chunk_queue(queue);
+        // Free the memory allocated for the array of chunks.
+        free_chunks(chunks, total_chunks);
     }
 
     return 0;
