@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -g -O3
+CFLAGS = -Wall -Wextra -g -O3
 LDFLAGS = -lpthread
 TARGET = main
 
