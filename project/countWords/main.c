@@ -19,16 +19,6 @@ typedef struct WorkerArgs {
     pthread_mutex_t* mutex; // Add a mutex for synchronization
 } WorkerArgs;
 
-void print_binary_contents(const uint8_t* data, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        printf("%c", data[i]);
-        if ((i + 1) % 16 == 0) {
-            printf("\n");
-        }
-    }
-    printf("\n");
-}
-
 // Worker thread function.
 void* worker(void* args) {
     WorkerArgs* worker_args = (WorkerArgs*)args;
