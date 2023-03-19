@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define NUM_VOWELS 6
 
@@ -70,16 +71,17 @@ void normalize_character(char* buffer) {
 }
 
 
-// Counts the total number of words and the number of words containing each vowel in the given file
-void count_words(FILE *file, int *total_words, int *vowel_count) {
+// Counts the total number of words and the number of words containing each vowel in the given chunk
+void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, int *vowel_count) {
     size_t num_bytes = 0;
-    char buffer[4]; // buffer to store the byte read from the file
+    char buffer[4]; // buffer to store the byte read from the chunk
     char word[256]; // Buffer to hold a word
     int counted_vowel[6] = {0}; // Initialize all flags to false
     int in_word = 0; // Flag indicating whether we are currently in a word
     int word_length = 0; // Length of the current word
 
-    while (fread(buffer, 1, 1, file) == 1) {
+    for (size_t chunk_pos = 0; chunk_pos < chunk_size; chunk_pos++) {
+        buffer[0] = chunk[chunk_pos];
         num_bytes = 1;
 
         // check if the byte uses a multi-byte encoding
@@ -97,10 +99,15 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
             }
 
             // read the remaining bytes of the encoding
-            if (fread(buffer + 1, 1, num_bytes - 1, file) != num_bytes - 1) {
-                printf("Error reading file\n");
-                return;
+            for (size_t i = 1; i < num_bytes; i++) {
+                if (chunk_pos + i < chunk_size) {
+                    buffer[i] = chunk[chunk_pos + i];
+                } else {
+                    printf("Error reading chunk\n");
+                    return;
+                }
             }
+            chunk_pos += num_bytes - 1;
         }
 
         // process the character
@@ -119,6 +126,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
                     break;
                 }
         }
+
         printf("%c", buffer[0]);
 
         if (is_word_character(buffer, in_word)) {
@@ -161,6 +169,7 @@ void count_words(FILE *file, int *total_words, int *vowel_count) {
         }
     }
 }
+
 
 /*
 int main(int argc, char *argv[]) {
