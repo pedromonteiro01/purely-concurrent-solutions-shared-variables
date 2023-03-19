@@ -127,7 +127,7 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
                 }
         }
 
-        printf("%c", buffer[0]);
+        //printf("%c", buffer[0]);
 
         if (is_word_character(buffer, in_word)) {
             if (!in_word) { // If we were not already in a word
@@ -169,52 +169,3 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
         }
     }
 }
-
-
-/*
-int main(int argc, char *argv[]) {
-    // --------- Check that at least one file is provided as an argument --------
-    if (argc < 2) {
-        printf("Usage: %s <file1> [<file2> ...]\n", argv[0]);
-        return 1;
-    }
-
-    // ----- Loop through all the file arguments and count the words in them ----
-    for (int i = 1; i < argc; i++) {
-        int total_words = 0;
-        int vowel_count[NUM_VOWELS] = {0};
-        FILE *file = fopen(argv[i], "rb"); // open the file in binary mode
-
-        if (file == NULL) {
-            printf("Could not open file: %s\n", argv[i]);
-            continue;
-        }
-
-        printf("File name: %s\n", argv[i]);
-        // Count the words in the file and update the total word count and vowel count arrays
-        count_words(file, &total_words, vowel_count);
-
-        fclose(file);
-
-        printf("Total number of words = %d\nN. of words with an\n", total_words);
-
-        // Print the count of words containing each vowel
-        char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u', 'y'};
-
-        for (int i = 0; i < NUM_VOWELS; i++) {
-            printf("%5c ", toupper(vowels[i]));
-        }
-
-        printf("\n");
-
-        for (int i = 0; i < NUM_VOWELS; i++) {
-            printf("%5d ", vowel_count[i]);
-        }
-
-        printf("\n\n");
-
-    }
-
-    return 0;
-}
-*/
