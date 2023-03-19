@@ -8,6 +8,7 @@
 
 // Define the number of worker threads.
 #define NUM_WORKERS 8
+#define NUM_VOWELS 6
 
 // Define a struct to pass arguments to worker threads.
 typedef struct WorkerArgs {
@@ -52,6 +53,26 @@ void* worker(void* args) {
     pthread_mutex_unlock(mutex); // Unlock the mutex after updating shared variables
 
     return NULL;
+}
+
+// Function to print the total number of words and the count of words containing each vowel
+void print_results(int total_words, int *vowel_count) {
+    printf("Total number of words = %d\nN. of words with an\n", total_words);
+
+    // Print the count of words containing each vowel
+    char vowels[NUM_VOWELS] = {'a', 'e', 'i', 'o', 'u', 'y'};
+
+    for (int i = 0; i < NUM_VOWELS; i++) {
+        printf("%5c ", toupper(vowels[i]));
+    }
+
+    printf("\n");
+
+    for (int i = 0; i < NUM_VOWELS; i++) {
+        printf("%5d ", vowel_count[i]);
+    }
+
+    printf("\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -101,6 +122,8 @@ int main(int argc, char* argv[]) {
 
         // Free the memory allocated for the array of chunks.
         free_chunks(chunks, total_chunks);
+
+        print_results(total_words, vowel_count);
     }
 
     pthread_mutex_destroy(&mutex);
