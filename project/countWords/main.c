@@ -9,6 +9,26 @@
 #define NUM_WORKERS 8
 #define NUM_VOWELS 6
 
+int is_separator_or_whitespace_or_punctuation(char c) {
+    // Check if the character is a whitespace
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+        return 1;
+    }
+
+    // Check if the character is a separation symbol
+    if (c == '-' || c == '\"' || c == '[' || c == ']' || c == '(' || c == ')' ||
+        c == '\xe2' || c == '\x80' || c == '\x9c' || c == '\x9d') {
+        return 1;
+    }
+
+    // Check if the character is a punctuation symbol
+    if (c == '.' || c == ',' || c == ':' || c == ';' || c == '?' || c == '!') {
+        return 1;
+    }
+
+    return 0;
+}
+
 // Define a struct to pass arguments to worker threads.
 typedef struct WorkerArgs {
     int id;
@@ -45,11 +65,12 @@ uint8_t** split_file_into_chunks(const char* file_path, int* total_chunks) {
             exit(EXIT_FAILURE);
 
         // If this is not the last chunk and it doesn't end in a whitespace, adjust the boundary
-        if (i < num_chunks - 1 && is_word_character(chunk[chunk_size - 1], 0)) {
+        if (i < num_chunks - 1 && !is_separator_or_whitespace_or_punctuation(chunk[chunk_size - 1]))
+        {
             int adjustment = 0;
 
             // Move the boundary to the previous whitespace or non-word character
-            while (chunk_size > 0 && is_word_character(chunk[chunk_size - 1], 0)) {
+            while (chunk_size > 0 && !is_separator_or_whitespace_or_punctuation(chunk[chunk_size - 1])) {
                 adjustment++;
                 chunk_size--;
             }
@@ -63,6 +84,19 @@ uint8_t** split_file_into_chunks(const char* file_path, int* total_chunks) {
                     chunk[4095-i] = ' ';
             }
         }
+
+        /*
+        // Write the chunk to a .txt file
+        char chunk_filename[256];
+        snprintf(chunk_filename, sizeof(chunk_filename), "chunk_%d.txt", i);
+        FILE* chunk_file = fopen(chunk_filename, "wb");
+        if (chunk_file) {
+            fwrite(chunk, 1, chunk_size, chunk_file);
+            fclose(chunk_file);
+        } else {
+            printf("Failed to create file: %s\n", chunk_filename);
+        }
+        */
 
         chunks[i] = chunk;
     }
@@ -98,7 +132,7 @@ void* worker(void* args) {
 
     // Process alternate chunks in the array.
     for (int i = worker_id; i < total_chunks; i += NUM_WORKERS) {
-        printf("Worker %d processing chunk\n", worker_id);
+        //printf("Worker %d processing chunk\n", worker_id);
         uint8_t* chunk = chunks[i];
 
         // processing logic
@@ -116,6 +150,7 @@ void* worker(void* args) {
 
     return NULL;
 }
+
 
 // Function to print the total number of words and the count of words containing each vowel
 void print_results(int total_words, int *vowel_count) {

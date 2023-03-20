@@ -6,11 +6,11 @@
 
 #define NUM_VOWELS 6
 
-int is_word_character(char c, int in_word) {
-    if (c == '\'' && in_word == 1)
+int is_word_character(char* c, int in_word) {
+    if (*c == '\'' && in_word == 1)
         return 1;
 
-    return isalnum(c);
+    return isalnum(*c);
 }
 
 void normalize_character(char* buffer) {
@@ -128,7 +128,7 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
 
         //printf("%c", buffer[0]);
 
-        if (is_word_character(buffer[0], in_word)) {
+        if (is_word_character(buffer, in_word)) {
             if (!in_word) { // If we were not already in a word
                 in_word = 1; // Set the flag to indicate we are now in a word
                 word_length = 0;
