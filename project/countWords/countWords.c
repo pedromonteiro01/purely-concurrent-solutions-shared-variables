@@ -101,13 +101,12 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
             // read the remaining bytes of the encoding
             for (size_t i = 1; i < num_bytes; i++) {
                 if (chunk_pos + i < chunk_size) {
-                    buffer[i] = chunk[chunk_pos + i];
+                    buffer[i] = chunk[++chunk_pos];
                 } else {
                     printf("Error reading chunk\n");
                     return;
                 }
             }
-            chunk_pos += num_bytes - 1;
         }
 
         // process the character

@@ -54,10 +54,13 @@ uint8_t** split_file_into_chunks(const char* file_path, int* total_chunks) {
                 chunk_size--;
             }
 
-            // Adjust the chunk size and update the file position
             if (adjustment > 0) {
-                chunk = realloc(chunk, chunk_size);
+                // update the file position (bring it back to the previous whitespace)
                 fseek(file, -(adjustment), SEEK_CUR);
+
+                // Fill the remaining bytes with whitespace
+                for (int i = 0; i < adjustment; i++)
+                    chunk[4095-i] = ' ';
             }
         }
 
@@ -95,8 +98,8 @@ void* worker(void* args) {
 
     // Process alternate chunks in the array.
     for (int i = worker_id; i < total_chunks; i += NUM_WORKERS) {
-        uint8_t* chunk = chunks[i];
         printf("Worker %d processing chunk\n", worker_id);
+        uint8_t* chunk = chunks[i];
 
         // processing logic
         count_words_in_chunk(chunk, 4096, &local_total_words, local_vowel_count);
@@ -109,7 +112,6 @@ void* worker(void* args) {
     for (int i = 0; i < 6; i++) {
         vowel_count[i] += local_vowel_count[i];
     }
-
     pthread_mutex_unlock(mutex); // Unlock the mutex after updating shared variables
 
     return NULL;
