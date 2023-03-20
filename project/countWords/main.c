@@ -85,19 +85,6 @@ uint8_t** split_file_into_chunks(const char* file_path, int* total_chunks) {
             }
         }
 
-        /*
-        // Write the chunk to a .txt file
-        char chunk_filename[256];
-        snprintf(chunk_filename, sizeof(chunk_filename), "chunk_%d.txt", i);
-        FILE* chunk_file = fopen(chunk_filename, "wb");
-        if (chunk_file) {
-            fwrite(chunk, 1, chunk_size, chunk_file);
-            fclose(chunk_file);
-        } else {
-            printf("Failed to create file: %s\n", chunk_filename);
-        }
-        */
-
         chunks[i] = chunk;
     }
 
