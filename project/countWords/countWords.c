@@ -6,11 +6,11 @@
 
 #define NUM_VOWELS 6
 
-int is_word_character(char* c, int in_word) {
-    if (*c == '\'' && in_word == 1)
+int is_word_character(char c, int in_word) {
+    if (c == '\'' && in_word == 1)
         return 1;
 
-    return isalnum(*c);
+    return isalnum(c);
 }
 
 void normalize_character(char* buffer) {
@@ -129,7 +129,7 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
 
         //printf("%c", buffer[0]);
 
-        if (is_word_character(buffer, in_word)) {
+        if (is_word_character(buffer[0], in_word)) {
             if (!in_word) { // If we were not already in a word
                 in_word = 1; // Set the flag to indicate we are now in a word
                 word_length = 0;
@@ -141,30 +141,30 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
         } else if (in_word) { // If the character is not a word character and we were in a word
             in_word = 0; // Clear the flag to indicate we are no longer in a word
             word[word_length] = '\0'; // Null-terminate the current word buffer
-        }
 
-        // Count the first occurence of a vowel in the current word
-        for (int i = 0; i < word_length; i++) {
-            buffer[0] = word[i];
+            // Count the first occurence of a vowel in the current word
+            for (int i = 0; i < word_length; i++) {
+                buffer[0] = word[i];
 
-            if (buffer[0] == 'a' && !counted_vowel[0]) {
-                counted_vowel[0] = 1;
-                vowel_count[0]++;
-            } else if (buffer[0] == 'e' && !counted_vowel[1]) {
-                counted_vowel[1] = 1;
-                vowel_count[1]++;
-            } else if (buffer[0] == 'i' && !counted_vowel[2]) {
-                counted_vowel[2] = 1;
-                vowel_count[2]++;
-            } else if (buffer[0] == 'o' && !counted_vowel[3]) {
-                counted_vowel[3] = 1;
-                vowel_count[3]++;
-            } else if (buffer[0] == 'u' && !counted_vowel[4]) {
-                counted_vowel[4] = 1;
-                vowel_count[4]++;
-            } else if (buffer[0] == 'y' && !counted_vowel[5]) {
-                counted_vowel[5] = 1;
-                vowel_count[5]++;
+                if (buffer[0] == 'a' && !counted_vowel[0]) {
+                    counted_vowel[0] = 1;
+                    vowel_count[0]++;
+                } else if (buffer[0] == 'e' && !counted_vowel[1]) {
+                    counted_vowel[1] = 1;
+                    vowel_count[1]++;
+                } else if (buffer[0] == 'i' && !counted_vowel[2]) {
+                    counted_vowel[2] = 1;
+                    vowel_count[2]++;
+                } else if (buffer[0] == 'o' && !counted_vowel[3]) {
+                    counted_vowel[3] = 1;
+                    vowel_count[3]++;
+                } else if (buffer[0] == 'u' && !counted_vowel[4]) {
+                    counted_vowel[4] = 1;
+                    vowel_count[4]++;
+                } else if (buffer[0] == 'y' && !counted_vowel[5]) {
+                    counted_vowel[5] = 1;
+                    vowel_count[5]++;
+                }
             }
         }
     }

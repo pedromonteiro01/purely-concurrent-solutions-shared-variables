@@ -1,4 +1,3 @@
-#include "../utils/file_splitter.h"
 #include "countWords.h"
 #include <pthread.h>
 #include <stdio.h>
@@ -19,6 +18,67 @@ typedef struct WorkerArgs {
     int* vowel_count;
     pthread_mutex_t* mutex; // Add a mutex for synchronization
 } WorkerArgs;
+
+// Function to split a binary file into 4KB chunks and return an array of chunks.
+// The total number of chunks is stored in the `total_chunks` output parameter.
+uint8_t** split_file_into_chunks(const char* file_path, int* total_chunks) {
+    FILE* file = fopen(file_path, "rb");
+    if (!file) {
+        return NULL;
+    }
+
+    // Calculate the number of chunks.
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    int num_chunks = (file_size + 4095) / 4096;
+
+    // Allocate memory for the array of chunks.
+    uint8_t** chunks = malloc(num_chunks * sizeof(uint8_t*));
+
+    // Read the chunks from the file.
+    for (int i = 0; i < num_chunks; i++) {
+        uint8_t* chunk = (uint8_t*)malloc(4096 * sizeof(uint8_t));
+        size_t chunk_size = fread(chunk, 1, 4096, file);
+
+        if (chunk_size < 4096 && !feof(file))
+            exit(EXIT_FAILURE);
+
+        // If this is not the last chunk and it doesn't end in a whitespace, adjust the boundary
+        if (i < num_chunks - 1 && is_word_character(chunk[chunk_size - 1], 0)) {
+            int adjustment = 0;
+
+            // Move the boundary to the previous whitespace or non-word character
+            while (chunk_size > 0 && is_word_character(chunk[chunk_size - 1], 0)) {
+                adjustment++;
+                chunk_size--;
+            }
+
+            // Adjust the chunk size and update the file position
+            if (adjustment > 0) {
+                chunk = realloc(chunk, chunk_size);
+                fseek(file, -(adjustment), SEEK_CUR);
+            }
+        }
+
+        chunks[i] = chunk;
+    }
+
+    fclose(file);
+    *total_chunks = num_chunks;
+    return chunks;
+}
+
+
+
+
+// Function to free the memory allocated for the array of chunks.
+void free_chunks(uint8_t** chunks, int total_chunks) {
+    for (int i = 0; i < total_chunks; i++) {
+        free(chunks[i]);
+    }
+    free(chunks);
+}
 
 // Worker thread function.
 void* worker(void* args) {

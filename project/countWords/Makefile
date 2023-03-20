@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -g -O3
 LDFLAGS = -lpthread
 TARGET = main
 
-SRCS = main.c ../utils/file_splitter.c countWords.c
+SRCS = main.c countWords.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)
