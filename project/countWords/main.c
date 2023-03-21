@@ -65,7 +65,18 @@ int is_separator_or_whitespace_or_punctuation(char c)
     return 0;
 }
 
-// Define a struct to pass arguments to worker threads.
+/**
+ *  \brief Struct to pass arguments to worker threads.
+ *
+ *  Its role is to store the arguments for each worker thread.
+ *
+ *  \param id unique identifier of the worker thread
+ *  \param chunks pointer to chunks array
+ *  \param total_chunks variable with the total number of chunks
+ *  \param total_words pointer to an integer that holds the total number of words
+ *  \param vowel_count  pointer to an integer array that holds the count of vowels
+ *  \param mutex pointer to a pthread_mutex_t used for synchronization between threads
+ */
 typedef struct WorkerArgs
 {
     int id;
