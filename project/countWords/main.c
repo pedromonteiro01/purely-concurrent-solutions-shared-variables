@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 // Define the number of worker threads.
-#define NUM_WORKERS 15
+#define NUM_WORKERS 8
 #define NUM_VOWELS 6
 
 /** \brief checks if a given character is a whitespace, separator symbol, or a punctuation symbol */
