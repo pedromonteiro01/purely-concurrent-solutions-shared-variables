@@ -4,7 +4,7 @@
  *  \brief Problem name: Count Words.
  *
  *  TODO
- * 
+ *
  *
  *  \authors Pedro Monteiro & José Trigo - March 2023
  */
@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 // Define the number of worker threads.
-#define NUM_WORKERS 8
+#define DEFAULT_NUM_WORKERS 8
 #define NUM_VOWELS 6
 
 /** \brief checks if a given character is a whitespace, separator symbol, or a punctuation symbol */
@@ -30,8 +30,13 @@ static uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks
 /** \brief frees the memory allocated for the array of chunks */
 void free_chunks(uint8_t **chunks, int total_chunks);
 
+/** \brief print command usage */
+static void printUsage (char *cmdName);
+
 /** \brief worker life cycle routine */
 void *worker(void *args);
+
+int NUM_WORKERS = DEFAULT_NUM_WORKERS;
 
 /**
  *  \brief Function is_separator_or_whitespace_or_punctuation.
@@ -255,28 +260,51 @@ void print_results(int total_words, int *vowel_count)
  *  \return status of operation
  */
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
     int total_words;
     pthread_mutex_t mutex;
 
-    if (argc < 2) {
-        printf("Usage: %s <file1> [file2] ...\n", argv[0]);
+    if (argc < 2)
+    {
+        printUsage (argv[0]);
         return 1;
     }
 
-    // Create worker threads.
-    pthread_t worker_threads[NUM_WORKERS];
-    WorkerArgs worker_args[NUM_WORKERS];
+    int opt;
+    char *file_names = NULL;
+    while ((opt = getopt(argc, argv, "ht:f:")) != -1) {
+        switch (opt) {
+            case 'h':
+                printUsage (argv[0]);
+                exit(EXIT_SUCCESS);
+            case 't':
+                NUM_WORKERS = atoi(optarg);
+                break;
+            case 'f':
+                file_names = optarg;
+                break;
+            default: // Handle invalid option
+                printf("Invalid option\n");
+                exit(EXIT_FAILURE);
+        }
+    }
 
-    // Iterate over the input files.
-    for (int i = 1; i < argc; i++) {
-        printf("Processing file: %s\n", argv[i]);
+    if (file_names == NULL) {
+        printUsage (argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    char *file_name = strtok(file_names, " ");
+    while (file_name != NULL) {
+        printf("Processing file: %s\n", file_name);
 
         // Split the binary file into chunks.
         int total_chunks;
-        uint8_t** chunks = split_file_into_chunks(argv[i], &total_chunks);
-        if (!chunks) {
-            printf("Failed to split file: %s\n", argv[i]);
+        uint8_t **chunks = split_file_into_chunks(file_name, &total_chunks);
+        if (!chunks)
+        {
+            printf("Failed to split file: %s\n", file_name);
             continue;
         }
 
@@ -284,8 +312,13 @@ int main(int argc, char* argv[]) {
         int vowel_count[6] = {0};
         pthread_mutex_init(&mutex, NULL); // Initialize the mutex
 
+        // Create worker threads.
+        pthread_t worker_threads[NUM_WORKERS];
+        WorkerArgs worker_args[NUM_WORKERS];
+
         // Assign chunks to worker threads.
-        for (int j = 0; j < NUM_WORKERS; j++) {
+        for (int j = 0; j < NUM_WORKERS; j++)
+        {
             worker_args[j].id = j;
             worker_args[j].chunks = chunks;
             worker_args[j].total_chunks = total_chunks;
@@ -296,7 +329,8 @@ int main(int argc, char* argv[]) {
         }
 
         // Wait for worker threads to finish.
-        for (int j = 0; j < NUM_WORKERS; j++) {
+        for (int j = 0; j < NUM_WORKERS; j++)
+        {
             pthread_join(worker_threads[j], NULL);
         }
 
@@ -304,8 +338,31 @@ int main(int argc, char* argv[]) {
         free_chunks(chunks, total_chunks);
 
         print_results(total_words, vowel_count);
+
+        pthread_mutex_destroy(&mutex);
+
+        file_name = strtok(NULL, " ");
+
+        printf("file_names: %s\n", file_name);
+
     }
 
-    pthread_mutex_destroy(&mutex);
     return 0;
+}
+
+/**
+ *  \brief Print command usage.
+ *
+ *  A message specifying how the program should be called is printed.
+ *
+ *  \param cmdName string with the name of the command
+ */
+
+void printUsage (char *cmdName)
+{
+  fprintf (stderr, "\nSynopsis: %s [OPTIONS]\n"
+           "  OPTIONS:\n"
+           "  -t nThreads  --- set the number of threads to be created (default: 8)\n"
+           "  -f files --- set the files to be processed\n"
+           "  -h           --- print this help\n", cmdName);
 }
