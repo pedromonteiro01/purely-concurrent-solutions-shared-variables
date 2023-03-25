@@ -31,7 +31,7 @@ static uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks
 void free_chunks(uint8_t **chunks, int total_chunks);
 
 /** \brief print command usage */
-static void printUsage (char *cmdName);
+static void printUsage(char *cmdName);
 
 /** \brief worker life cycle routine */
 void *worker(void *args);
@@ -260,6 +260,8 @@ void print_results(int total_words, int *vowel_count)
  *  \return status of operation
  */
 
+#define MAX_FILENAMES 100
+
 int main(int argc, char *argv[])
 {
     int total_words;
@@ -267,46 +269,61 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        printUsage (argv[0]);
+        printUsage(argv[0]);
         return 1;
     }
 
     int opt;
-    char *file_names = NULL;
-    while ((opt = getopt(argc, argv, "ht:f:")) != -1) {
-        switch (opt) {
-            case 'h':
-                printUsage (argv[0]);
-                exit(EXIT_SUCCESS);
-            case 't':
-                NUM_WORKERS = atoi(optarg);
-                break;
-            case 'f':
-                file_names = optarg;
-                break;
-            default: // Handle invalid option
-                printf("Invalid option\n");
-                exit(EXIT_FAILURE);
+    char *file_names[MAX_FILENAMES] = {NULL};
+    int num_files = 0;
+    while ((opt = getopt(argc, argv, "t:f:h")) != -1)
+    {
+        switch (opt)
+        {
+        case 't':
+            NUM_WORKERS = atoi(optarg);
+            break;
+        case 'f':
+            // Split the file names by comma and save them to the file_names array
+            char *token;
+            token = strtok(optarg, ",");
+            while (token != NULL)
+            {
+                file_names[num_files] = strdup(token);
+                num_files++;
+                if (num_files >= MAX_FILENAMES)
+                {
+                    printf("Too many file names\n");
+                    return 1;
+                }
+                token = strtok(NULL, ",");
+            }
+            break;
+        case 'h':
+            printUsage(argv[0]);
+            return 0;
+        default: // Handle invalid option
+            printf("Invalid option\n");
+            return 1;
         }
     }
 
-    if (file_names == NULL) {
-        printUsage (argv[0]);
+    if (num_files == 0)
+    {
+        printUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    char *file_name = strtok(file_names, ",");
-
-    
-    while (file_name != NULL) {
-        printf("Processing file: %s\n", file_name);
+    for (int i = 0; i < num_files; i++)
+    {
+        printf("Processing file: %s\n", file_names[i]);
 
         // Split the binary file into chunks.
         int total_chunks;
-        uint8_t **chunks = split_file_into_chunks(file_name, &total_chunks);
+        uint8_t **chunks = split_file_into_chunks(file_names[i], &total_chunks);
         if (!chunks)
         {
-            printf("Failed to split file: %s\n", file_name);
+            printf("Failed to split file: %s\n", file_names[i]);
             continue;
         }
 
@@ -343,13 +360,11 @@ int main(int argc, char *argv[])
 
         pthread_mutex_destroy(&mutex);
 
-        file_name = strtok(NULL, ",");
-
+        free(file_names[i]);
     }
 
     return 0;
 }
-
 /**
  *  \brief Print command usage.
  *
@@ -358,11 +373,12 @@ int main(int argc, char *argv[])
  *  \param cmdName string with the name of the command
  */
 
-void printUsage (char *cmdName)
+void printUsage(char *cmdName)
 {
-  fprintf (stderr, "\nSynopsis: %s [OPTIONS]\n"
-           "  OPTIONS:\n"
-           "  -t nThreads  --- set the number of threads to be created (default: 8)\n"
-           "  -f files --- set the files to be processed\n"
-           "  -h           --- print this help\n", cmdName);
+    fprintf(stderr, "\nSynopsis: %s [OPTIONS]\n"
+                    "  OPTIONS:\n"
+                    "  -t nThreads  --- set the number of threads to be created (default: 8)\n"
+                    "  -f files --- set the files to be processed\n"
+                    "  -h           --- print this help\n",
+            cmdName);
 }
