@@ -295,7 +295,9 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char *file_name = strtok(file_names, " ");
+    char *file_name = strtok(file_names, ",");
+
+    
     while (file_name != NULL) {
         printf("Processing file: %s\n", file_name);
 
@@ -341,9 +343,7 @@ int main(int argc, char *argv[])
 
         pthread_mutex_destroy(&mutex);
 
-        file_name = strtok(NULL, " ");
-
-        printf("file_names: %s\n", file_name);
+        file_name = strtok(NULL, ",");
 
     }
 
