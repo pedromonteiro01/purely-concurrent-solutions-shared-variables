@@ -3,7 +3,9 @@
  *
  *  \brief Problem name: Count Words.
  *
- *  TODO
+ *  Word count application that can process a 
+ *  binary file and count the number of words in it, 
+ *  as well as the number of vowels in each word.
  *
  *
  *  \authors Pedro Monteiro & José Trigo - March 2023
@@ -36,6 +38,7 @@ static void printUsage(char *cmdName);
 /** \brief worker life cycle routine */
 void *worker(void *args);
 
+/** \brief default number of worker threads */
 int NUM_WORKERS = DEFAULT_NUM_WORKERS;
 
 /**

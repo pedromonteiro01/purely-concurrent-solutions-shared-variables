@@ -1,7 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Merges two sorted subarrays
+/** \brief merge two sorted subarrays */
+void merge(int *arr, int left, int middle, int right);
+
+/** \brief recursively sort array using merge sort */
+void mergeSort(int *arr, int left, int right);
+
+/** \brief print the sorted array */
+void printArray(int *arr, int size);
+
+/** \brief check if the array of integers has been sorted correctly */
+void validateSort(int *arr, int N);
+
+/**
+ *  \brief Fuction merge.
+ *
+ *  Its role to merge two sorted subarrays
+ *
+ *  \param arr pointer to the integer array to be sorted
+ *  \param left integer representing the starting index of the left subarray
+ *  \param middle integer representing the ending index of the left subarray and the starting index of the right subarray
+ *  \param right integer representing the ending index of the right subarray
+ *
+ */
 void merge(int *arr, int left, int middle, int right)
 {
     int i, j, k;
@@ -64,7 +86,16 @@ void merge(int *arr, int left, int middle, int right)
     free(right_arr);
 }
 
-// Recursive function to sort array using merge sort
+/**
+ *  \brief Fuction mergeSort.
+ *
+ *  Its role to recursively sort array using merge sort
+ *
+ *  \param arr pointer to an array of integers that needs to be sorted
+ *  \param left integer representing the leftmost index of the subarray that needs to be sorted
+ *  \param right integer representing the rightmost index of the subarray that needs to be sorted
+ *
+ */
 void mergeSort(int *arr, int left, int right)
 {
     if (left < right)
@@ -76,7 +107,15 @@ void mergeSort(int *arr, int left, int right)
     }
 }
 
-// Function to print the sorted array
+/**
+ *  \brief Fuction printArray.
+ *
+ *  Its role to print the sorted array
+ *
+ *  \param arr pointer to the first element of the array that needs to be printed
+ *  \param size  integer that represents the number of elements in the array
+ *
+ */
 void printArray(int *arr, int size)
 {
     int i;
@@ -87,6 +126,15 @@ void printArray(int *arr, int size)
     printf("\n");
 }
 
+/**
+ *  \brief Fuction validateSort.
+ *
+ *  Its role to check if the array of integers has been sorted correctly, in ascending order
+ *
+ *  \param arr pointer to an integer array containing the elements to be validated
+ *  \param size integer representing the size of the array
+ *
+ */
 void validateSort(int *arr, int N)
 {
     int i;

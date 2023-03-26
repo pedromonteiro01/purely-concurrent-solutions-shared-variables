@@ -6,6 +6,25 @@
 
 #define NUM_VOWELS 6
 
+/** \brief determine whether the given character c is a valid character in a word */
+static int is_word_character(char* c, int in_word);
+
+/** \brief normalize a character by converting certain UTF-8 encoded characters to their ASCII equivalent */
+static void normalize_character(char* buffer);
+
+/** \brief count the total number of words and the number of words containing each vowel in the given chunk */
+void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, int *vowel_count);
+
+/**
+ *  \brief Function is_word_character.
+ *
+ *  Its role is to determine whether the given character c is a valid character in a word.
+ *
+ *  \param c: pointer to a character
+ *  \param in_word: integer flag that indicates whether the current character is part of a word or not
+ * 
+ *  \return returns 1 if the character is a word character or a single quote within a word, and 0 otherwise
+ */
 int is_word_character(char* c, int in_word) {
     if (*c == '\'' && in_word == 1)
         return 1;
@@ -13,6 +32,14 @@ int is_word_character(char* c, int in_word) {
     return isalnum(*c);
 }
 
+/**
+ *  \brief Function normalize_character.
+ *
+ *  Its role is to normalize a character by converting certain UTF-8 encoded characters to their ASCII equivalent.
+ *
+ *  \param buffer: pointer to a character array
+ * 
+ */
 void normalize_character(char* buffer) {
     /* This code shifts the first byte to the left by 8 bits and then ORs it with the second byte.
        The resulting value is an unsigned integer that represents the two-byte sequence. */
@@ -71,7 +98,17 @@ void normalize_character(char* buffer) {
 }
 
 
-// Counts the total number of words and the number of words containing each vowel in the given chunk
+/**
+ *  \brief Function count_words_in_chunk.
+ *
+ *  Its role is to count the total number of words and the number of words containing each vowel in the given chunk.
+ *
+ *  \param chunk: pointer to a block of memory containing a chunk of text in UTF-8 format
+ *  \param chunk_size: size in bytes of the chunk parameter
+ *  \param total_words: pointer to an integer variable that will be used to store the total number of words counted in the chunk
+ *  \param vowel_count: pointer to an integer array of size 6 that will be used to store the number of words that contain each of 6 vowels
+ * 
+ */
 void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, int *vowel_count) {
     size_t num_bytes = 0;
     char buffer[4]; // buffer to store the byte read from the chunk

@@ -3,9 +3,10 @@
  *
  *  \brief Problem name: Integer Sort.
  *
- *  TODO
- *
- *
+ * Implementation of a parallel merge sort algorithm for sorting an array of integers in 
+ * ascending order using multiple threads. It takes a file of integers as input, creates a 
+ * specified number of worker threads to sort different chunks of the array in parallel, and 
+ * then merges the results into a single sorted array.
  *  \authors Pedro Monteiro & José Trigo - March 2023
  */
 
@@ -18,11 +19,27 @@
 
 #define DEFAULT_NUM_WORKERS 8
 
+/** \brief sort an array of integers in ascending order */
+static void *parallel_merge_sort(void *args);
+
+/** \brief default number of worker threads */
 int NUM_WORKERS = DEFAULT_NUM_WORKERS;
 
 /** \brief print command usage */
 static void printUsage(char *cmdName);
 
+/**
+ *  \brief Struct to pass arguments to worker threads.
+ *
+ *  Its role is to store the arguments for each worker thread.
+ *
+ *  \param id unique identifier of the worker thread
+ *  \param chunks pointer to chunks array
+ *  \param total_chunks variable with the total number of chunks
+ *  \param total_words pointer to an integer that holds the total number of words
+ *  \param vowel_count  pointer to an integer array that holds the count of vowels
+ *  \param mutex pointer to a pthread_mutex_t used for synchronization between threads
+ */
 typedef struct WorkerArgs
 {
     int id;
@@ -30,6 +47,17 @@ typedef struct WorkerArgs
     int left;
     int right;
 } WorkerArgs;
+
+
+/**
+ *  \brief Function parallel_merge_sort.
+ *
+ *  Its role is to sort an array of integers in ascending order.
+ *
+ *  \param arr: a pointer to the array to be sorted
+ *  \param left: an integer representing the starting index of the subarray to be sorted
+ *  \param right: an integer representing the ending index of the subarray to be sorted
+ */
 
 void *parallel_merge_sort(void *args)
 {
