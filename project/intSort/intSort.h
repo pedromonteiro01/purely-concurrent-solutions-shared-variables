@@ -13,7 +13,7 @@ void mergeSort(int *arr, int left, int right);
 
 void merge(int *arr, int left, int middle, int right);
 
-void validateSort(int *arr, int N);
+int validateSort(int *arr, int N);
 
 
 #endif // INT_SORT_H

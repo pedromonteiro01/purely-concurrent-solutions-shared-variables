@@ -11,7 +11,7 @@ void mergeSort(int *arr, int left, int right);
 void printArray(int *arr, int size);
 
 /** \brief check if the array of integers has been sorted correctly */
-void validateSort(int *arr, int N);
+int validateSort(int *arr, int N);
 
 /**
  *  \brief Fuction merge.
@@ -135,7 +135,7 @@ void printArray(int *arr, int size)
  *  \param size integer representing the size of the array
  *
  */
-void validateSort(int *arr, int N)
+int validateSort(int *arr, int N)
 {
     int i;
 
@@ -144,9 +144,11 @@ void validateSort(int *arr, int N)
         if (arr[i] > arr[i + 1])
         {
             printf("Error in position %d between element %d and %d\n", i, arr[i], arr[i + 1]);
-            break;
+            return 0;
         }
         if (i == (N - 1))
             printf("Everything is OK!\n");
     }
+
+    return 1;
 }
