@@ -1,11 +1,11 @@
-# CLE
+# CLE - Projects
 
-Compile
-```c
-cd project1 && make
-```
+Repository that contains projects carried out in the CLE course
 
-Run
-```c
-./program
-```
+- Pthread Project 
+- MPI Project
+- Cuda Project
+
+Authors
+- José Trigo 98597
+- Pedro Monteiro 97484
