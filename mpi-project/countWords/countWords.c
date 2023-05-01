@@ -131,7 +131,7 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
             } else if ((buffer[0] & 0xF8) == 0xF0) {
                 num_bytes = 4;
             } else {
-                printf("Invalid UTF-8 sequence detected\n");
+                printf("%x - Invalid UTF-8 sequence detected \n", buffer[0]);
                 return;
             }
 

@@ -100,7 +100,6 @@ uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks)
                     chunk[4095 - i] = ' ';
             }
         }
-
         chunks[i] = chunk;
     }
 
@@ -191,13 +190,10 @@ int main(int argc, char *argv[])
 
     if (rank == 0)
     {
-        while ((opt = getopt(argc, argv, "t:f:h")) != -1)
+        while ((opt = getopt(argc, argv, "f:h")) != -1)
         {
             switch (opt)
             {
-            case 't':
-                NUM_WORKERS = atoi(optarg);
-                break;
             case 'f':
                 // Split the file names by comma and save them to the file_names array
                 char *token;
@@ -248,10 +244,9 @@ int main(int argc, char *argv[])
                 printf("Failed to split file: %s\n", file_names[i]);
                 continue;
             }
-
-            MPI_Bcast(&total_chunks, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
         }
+
+        MPI_Bcast(&total_chunks, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
         if (rank != 0)
         {
