@@ -12,7 +12,6 @@
  */
 
 #include "countWords.h"
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -121,6 +120,7 @@ void worker(int rank, int size, uint8_t **chunks, int total_chunks, int *total_w
 {
     int chunk_start = (rank * total_chunks) / size;
     int chunk_end = ((rank + 1) * total_chunks) / size;
+    printf("chunk start: %d --- chunk end: %d \n", chunk_start, chunk_end);
 
     int local_total_words = 0;
     int local_vowel_count[6] = {0};
