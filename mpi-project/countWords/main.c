@@ -109,6 +109,8 @@ uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks)
         chunks[i] = chunk;
     }
 
+    printf("num chunks: %d \n", num_chunks);
+
     fclose(file);
     *total_chunks = num_chunks;
     return chunks;
