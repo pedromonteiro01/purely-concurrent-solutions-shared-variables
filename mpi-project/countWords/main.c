@@ -20,12 +20,19 @@
 #include <mpi.h>
 #include <stdbool.h>
 
-// Define the number of worker threads.
-#define DEFAULT_NUM_WORKERS 8
+// Define the number of vowels.
 #define NUM_VOWELS 6
 
-/** \brief default number of worker threads */
-int NUM_WORKERS = DEFAULT_NUM_WORKERS;
+#define MPI_DEBUG() {                  \
+    int i = 0;                         \
+    char hostname[256];                \
+    gethostname(hostname, sizeof(hostname));\
+    printf("PID %d on %s ready for attach\n", getpid(), hostname);\
+    fflush(stdout);                    \
+    while (!i)                         \
+        if (fopen("continue.txt", "r"))\
+            i = 1;                     \
+}
 
 int is_separator_or_whitespace_or_punctuation(char c)
 {
@@ -118,32 +125,38 @@ void free_chunks(uint8_t **chunks, int total_chunks)
 
 void worker(int rank, int size, uint8_t **chunks, int total_chunks, int *total_words, int *vowel_count)
 {
-    int chunk_start = (rank * total_chunks) / size;
-    int chunk_end = ((rank + 1) * total_chunks) / size;
-    printf("chunk start: %d --- chunk end: %d \n", chunk_start, chunk_end);
-
+    int chunk_start, chunk_end;
     int local_total_words = 0;
     int local_vowel_count[6] = {0};
+
+    chunk_start = (rank * total_chunks) / size;
+    chunk_end = ((rank + 1) * total_chunks) / size;
 
     for (int i = chunk_start; i < chunk_end; i++)
     {
         uint8_t *chunk = chunks[i];
-
         count_words_in_chunk(chunk, 4096, &local_total_words, local_vowel_count);
     }
 
-    int global_total_words;
-    int global_vowel_count[6] = {0};
+    if (rank == 0) {
+        *total_words = local_total_words;
+        memcpy(vowel_count, local_vowel_count, 6 * sizeof(int));
 
-    MPI_Reduce(&local_total_words, &global_total_words, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(local_vowel_count, global_vowel_count, 6, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        for (int i = 1; i < size; i++) {
+            MPI_Recv(&local_total_words, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            *total_words += local_total_words;
 
-    if (rank == 0)
-    {
-        *total_words = global_total_words;
-        memcpy(vowel_count, global_vowel_count, 6 * sizeof(int));
+            MPI_Recv(local_vowel_count, 6, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            for (int j = 0; j < NUM_VOWELS; j++) {
+                vowel_count[j] += local_vowel_count[j];
+            }
+        }
+    } else {
+        MPI_Send(&local_total_words, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(local_vowel_count, 6, MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
 }
+
 
 void print_results(int total_words, int *vowel_count)
 {
@@ -175,6 +188,7 @@ int main(int argc, char *argv[])
     int rank, size;
 
     MPI_Init(&argc, &argv);
+    //MPI_DEBUG();
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -242,11 +256,12 @@ int main(int argc, char *argv[])
             if (!chunks)
             {
                 printf("Failed to split file: %s\n", file_names[i]);
-                continue;
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             }
         }
 
         MPI_Bcast(&total_chunks, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 
         if (rank != 0)
         {
@@ -262,10 +277,13 @@ int main(int argc, char *argv[])
         for (int i = 0; i < total_chunks; i++)
         {
             MPI_Bcast(chunks[i], 4096, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
         }
 
         total_words = 0;
         int vowel_count[6] = {0};
+
+        MPI_Barrier(MPI_COMM_WORLD);
 
         // Call worker function
         worker(rank, size, chunks, total_chunks, &total_words, vowel_count);
