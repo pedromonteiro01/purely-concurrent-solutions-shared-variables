@@ -78,7 +78,7 @@ uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks)
     // Read the chunks from the file.
     for (int i = 0; i < num_chunks; i++)
     {
-        uint8_t *chunk = (uint8_t *)malloc(4096 * sizeof(uint8_t));
+        uint8_t *chunk = (uint8_t *)calloc(4096, sizeof(uint8_t));
         size_t chunk_size = fread(chunk, 1, 4096, file);
 
         if (chunk_size < 4096 && !feof(file))
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    int total_chunks;
+    int total_chunks = 0;
     uint8_t **chunks;
     for (int i = 0; i < num_files; i++)
     {
@@ -255,6 +255,7 @@ int main(int argc, char *argv[])
 
             // Split the binary file into chunks.
             chunks = split_file_into_chunks(file_names[i], &total_chunks);
+            
             if (!chunks)
             {
                 printf("Failed to split file: %s\n", file_names[i]);
