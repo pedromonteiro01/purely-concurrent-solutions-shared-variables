@@ -163,8 +163,6 @@ void count_words_in_chunk(uint8_t* chunk, size_t chunk_size, int *total_words, i
                 }
         }
 
-        //printf("%c", buffer[0]);
-
         if (is_word_character(buffer, in_word)) {
             if (!in_word) { // If we were not already in a word
                 in_word = 1; // Set the flag to indicate we are now in a word

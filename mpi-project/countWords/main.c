@@ -23,16 +23,28 @@
 // Define the number of vowels.
 #define NUM_VOWELS 6
 
-#define MPI_DEBUG() {                  \
-    int i = 0;                         \
-    char hostname[256];                \
-    gethostname(hostname, sizeof(hostname));\
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);\
-    fflush(stdout);                    \
-    while (!i)                         \
-        if (fopen("continue.txt", "r"))\
-            i = 1;                     \
-}
+/** \brief checks if a given character is a whitespace, separator symbol, or a punctuation symbol */
+static int is_separator_or_whitespace_or_punctuation(char c);
+
+/** \brief takes a file path as input and returns an array of 4KB chunks */
+static uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks);
+
+/** \brief frees the memory allocated for the array of chunks */
+void free_chunks(uint8_t **chunks, int total_chunks);
+
+/** \brief worker life cycle routine */
+void worker(int rank, int size, uint8_t **chunks, int total_chunks, int *total_words, int *vowel_count);
+
+/** \brief print command usage */
+static void printUsage(char *cmdName);
+
+/**
+ *  \brief Function is_separator_or_whitespace_or_punctuation.
+ *
+ *  Its role is to check if a given character is a whitespace, separator symbol, or a punctuation symbol.
+ *
+ *  \param c word character
+ */
 
 int is_separator_or_whitespace_or_punctuation(char c)
 {
@@ -57,6 +69,15 @@ int is_separator_or_whitespace_or_punctuation(char c)
 
     return 0;
 }
+
+/**
+ *  \brief Function split_file_into_chunks.
+ *
+ *  Its role is to split a binary file into 4KB chunks and return an array of chunks.
+ *
+ *  \param file_path  pointer to a string that represents the path of the file
+ *  \param total_chunks variable with the total number of chunks
+ */
 
 uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks)
 {
@@ -109,12 +130,19 @@ uint8_t **split_file_into_chunks(const char *file_path, int *total_chunks)
         chunks[i] = chunk;
     }
 
-    printf("num chunks: %d \n", num_chunks);
-
     fclose(file);
     *total_chunks = num_chunks;
     return chunks;
 }
+
+/**
+ *  \brief Function free_chunks.
+ *
+ *  Its role is to free the memory allocated for the array of chunks.
+ *
+ *  \param chunks pointer to an array of pointers to uint8_t
+ *  \param total_chunks variable with the total number of chunks
+ */
 
 void free_chunks(uint8_t **chunks, int total_chunks)
 {
@@ -125,21 +153,39 @@ void free_chunks(uint8_t **chunks, int total_chunks)
     free(chunks);
 }
 
+/**
+ *  \brief Function worker.
+ *
+ *  Its role is to simulate the life cycle of a worker.
+ *
+ *  \param rank is the ID of the current process (an integer).
+ *  \param size is the total number of processes being used (an integer).
+ *  \param chunks is an array of pointers to uint8_t, representing the data chunks to be processed.
+ *  \param total_chunks is the total number of data chunks.
+ *  \param total_words is a pointer to an integer, which will be used to store the total word count.
+ *  \param vowel_count is a pointer to an array of integers, which will be used to store the number of occurrences of each vowel.
+ */
+
 void worker(int rank, int size, uint8_t **chunks, int total_chunks, int *total_words, int *vowel_count)
 {
     int chunk_start, chunk_end;
     int local_total_words = 0;
     int local_vowel_count[6] = {0};
 
+
+    // Determine the range of chunks to be processed by this process.
     chunk_start = (rank * total_chunks) / size;
     chunk_end = ((rank + 1) * total_chunks) / size;
 
+    // Iterate over the assigned chunks, 
+    // calling count_words_in_chunk to update the local word and vowel counts.
     for (int i = chunk_start; i < chunk_end; i++)
     {
         uint8_t *chunk = chunks[i];
         count_words_in_chunk(chunk, 4096, &local_total_words, local_vowel_count);
     }
 
+    // If this process has a rank of 0, receive the results from all other processes and aggregate them.
     if (rank == 0) {
         *total_words = local_total_words;
         memcpy(vowel_count, local_vowel_count, 6 * sizeof(int));
@@ -154,11 +200,20 @@ void worker(int rank, int size, uint8_t **chunks, int total_chunks, int *total_w
             }
         }
     } else {
+        // If this process has a rank other than 0, send its results to the master process.
         MPI_Send(&local_total_words, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         MPI_Send(local_vowel_count, 6, MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
 }
 
+/**
+ *  \brief Function print_results.
+ *
+ *  Its role is to print the total number of words and the count of words containing each vowel.
+ *
+ *  \param total_words the total number of words
+ *  \param vowel_count pointer to an integer array that contains the count of words containing each vowel
+ */
 
 void print_results(int total_words, int *vowel_count)
 {
@@ -184,18 +239,29 @@ void print_results(int total_words, int *vowel_count)
 
 #define MAX_FILENAMES 100
 
+/**
+ *  \brief Main Function.
+ *
+ *  Its role is for parallel word and vowel count program using MPI
+ *
+ *  \param argc number of words of the command line
+ *  \param argv list of words of the command line
+ *
+ *  \return status of operation
+ */
+
 int main(int argc, char *argv[])
 {
     int total_words;
     int rank, size;
 
-    MPI_Init(&argc, &argv);
-    //MPI_DEBUG();
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Init(&argc, &argv); // initialize MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); // get current process's rank
+    MPI_Comm_size(MPI_COMM_WORLD, &size); // get total number of processes
 
-    if (argc < 2)
+    if (argc < 2) // check if there are enough arguments
     {
+        printUsage(argv[0]);
         MPI_Finalize();
         return 1;
     }
@@ -204,6 +270,7 @@ int main(int argc, char *argv[])
     char *file_names[MAX_FILENAMES] = {NULL};
     int num_files = 0;
 
+    // if master process, parse the command line arguments 
     if (rank == 0)
     {
         while ((opt = getopt(argc, argv, "f:h")) != -1)
@@ -227,7 +294,7 @@ int main(int argc, char *argv[])
                 }
                 break;
             case 'h':
-                printf("help");
+                printUsage(argv[0]);
                 MPI_Finalize();
                 return 0;
             default: // Handle invalid option
@@ -237,16 +304,20 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Broadcast the number of files to all processes.
     MPI_Bcast(&num_files, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    if (num_files == 0)
+    if (num_files == 0) // If there are no files, print usage information and exit.
     {
+        printUsage(argv[0]);
         MPI_Finalize();
         exit(EXIT_FAILURE);
     }
 
     int total_chunks = 0;
     uint8_t **chunks;
+
+    // iterate over the file names, processing each one in turn
     for (int i = 0; i < num_files; i++)
     {
         if (rank == 0)
@@ -263,8 +334,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        MPI_Bcast(&total_chunks, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&total_chunks, 1, MPI_INT, 0, MPI_COMM_WORLD); // broadcast the total number of chunks to all processes
+        MPI_Barrier(MPI_COMM_WORLD); // wait for all processes to catch up.
 
         if (rank != 0)
         {
@@ -305,4 +376,21 @@ int main(int argc, char *argv[])
     MPI_Finalize();
 
     return 0;
+}
+
+/**
+ *  \brief Print command usage.
+ *
+ *  A message specifying how the program should be called is printed.
+ *
+ *  \param cmdName string with the name of the command
+ */
+
+void printUsage(char *cmdName)
+{
+    fprintf(stderr, "\nSynopsis: %s [OPTIONS]\n"
+                    "  OPTIONS:\n"
+                    "  -f files --- set the files to be processed\n"
+                    "  -h           --- print this help\n",
+            cmdName);
 }
