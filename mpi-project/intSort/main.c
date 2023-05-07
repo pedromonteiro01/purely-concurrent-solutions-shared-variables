@@ -9,23 +9,25 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+// Define the distributor rank.
 #define DISTRIBUTOR_RANK 0
 
-#define MPI_DEBUG() {                  \
-    int i = 0;                         \
-    char hostname[256];                \
-    gethostname(hostname, sizeof(hostname));\
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);\
-    fflush(stdout);                    \
-    while (!i)                         \
-        if (fopen("continue.txt", "r"))\
-            i = 1;                     \
-}
+/** \brief print command usage */
+static void printUsage(char *cmdName);
 
-
+/** \brief merge more than one sorted subsequences of an array into a single sorted sequence*/
 void mergeSortedSubsequences(int *arr, int num_workers, int size, int *send_counts, int *displs);
 
-static void printUsage(char *cmdName);
+/**
+ *  \brief Main Function.
+ *
+ *  Its role is to sort an array of integers in parallel using the Merge Sort algorithm with MPI
+ *
+ *  \param argc number of words of the command line
+ *  \param argv list of words of the command line
+ *
+ *  \return status of operation
+ */
 
 int main(int argc, char *argv[])
 {
@@ -190,6 +192,18 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+/**
+ *  \brief Merge sorted sub arrays.
+ *
+ *  The purpose of this function is to merge num_workers sorted subsequences of arr into a single sorted sequence.
+ *
+ *  \param arr pointer to an array of integers that contains the sorted subsequences to be merged
+ *  \param num_workers  integer that represents the number of workers involved
+ *  \param size integer that represents the total size of the input array
+ *  \param send_counts pointer to an array that represents the number of elements to be sent by each worker
+ *  \param displs pointer to an array of integers that represents the displacement for each worker's send buffer
+ */
+
 void mergeSortedSubsequences(int *arr, int num_workers, int size, int *send_counts, int *displs)
 {
     int *temp = (int *)malloc(size * sizeof(int));
@@ -241,6 +255,14 @@ void mergeSortedSubsequences(int *arr, int num_workers, int size, int *send_coun
     free(indexes);
     free(end_indexes);
 }
+
+/**
+ *  \brief Print command usage.
+ *
+ *  A message specifying how the program should be called is printed.
+ *
+ *  \param cmdName string with the name of the command
+ */
 
 void printUsage(char *cmdName)
 {
