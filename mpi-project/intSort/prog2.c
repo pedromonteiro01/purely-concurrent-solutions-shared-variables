@@ -32,26 +32,32 @@ void mergeSortedSubsequences(int *arr, int num_workers, int size, int *send_coun
 int main(int argc, char *argv[])
 {
     MPI_Init(NULL, NULL);
-    //MPI_DEBUG();
 
     int size, rank;
+
+    // Get the number of processes
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    // Get the rank of the process
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    // Set the number of worker processes
     int num_workers = size;
+    
     char *filename = NULL;
+
+    // Parse command line options
     int c;
     while ((c = getopt(argc, argv, "t:f:h")) != -1)
     {
         switch (c)
         {
-        case 'f':
+        case 'f': // Set the filename
             filename = optarg;
             break;
-        case 'h':
+        case 'h': // Print usage information and exit
             printUsage(argv[0]);
             return 0;
-        case '?':
+        case '?': // Handle missing option arguments or invalid option
             if (optopt == 'f' || optopt == 't')
             {
                 fprintf(stderr, "Option -%c requires an argument.\n", optopt);
@@ -75,6 +81,7 @@ int main(int argc, char *argv[])
     int *arr = NULL;
     int arr_size = 0;
 
+    // Read input data from file if current process is the distributor
     if (rank == DISTRIBUTOR_RANK)
     {
         FILE *file = fopen(filename, "rb");
@@ -84,10 +91,12 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        // Determine the size of the file
         fseek(file, 0, SEEK_END);
         arr_size = ftell(file) / sizeof(int);
         fseek(file, 0, SEEK_SET);
 
+        // Allocate memory for the array
         arr = malloc(arr_size * sizeof(int));
         if (arr == NULL)
         {
@@ -95,6 +104,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        // Read integers from the file
         int count = fread(arr, sizeof(int), arr_size, file);
         if (count != arr_size)
         {
@@ -105,6 +115,7 @@ int main(int argc, char *argv[])
         fclose(file);
     }
 
+    // Broadcast array size to all processes
     int result;
     result = MPI_Bcast(&arr_size, 1, MPI_INT, DISTRIBUTOR_RANK, MPI_COMM_WORLD);
     if (result != MPI_SUCCESS)
@@ -113,10 +124,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Calculate chunk size and local array size for each process
     int chunk_size = arr_size / size;
     int remainder = arr_size % size;
     int local_arr_size = chunk_size + (rank < remainder ? 1 : 0);
 
+    // Allocate memory for local array
     int *local_arr = malloc(local_arr_size * sizeof(int));
     if (local_arr == NULL)
     {
@@ -129,6 +142,7 @@ int main(int argc, char *argv[])
 
     if (rank == DISTRIBUTOR_RANK)
     {
+        // Allocate memory for send_counts and displs arrays
         send_counts = malloc(size * sizeof(int));
         displs = malloc(size * sizeof(int));
         if (send_counts == NULL || displs == NULL)
@@ -136,6 +150,8 @@ int main(int argc, char *argv[])
             printf("Error: cannot allocate memory\n");
             return 1;
         }
+
+        // Calculate send_counts and displs for each process
         for (int i = 0; i < size; ++i)
         {
             send_counts[i] = chunk_size + (i < remainder ? 1 : 0);
@@ -143,6 +159,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Distribute the array chunks to all processes using Scatterv
     result = MPI_Scatterv(arr, send_counts, displs, MPI_INT, local_arr, local_arr_size, MPI_INT, DISTRIBUTOR_RANK, MPI_COMM_WORLD);
     if (result != MPI_SUCCESS)
     {
@@ -150,8 +167,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Each process sorts its local array using merge sort
     mergeSort(local_arr, 0, local_arr_size - 1);
 
+    // Reallocate memory for the array in the distributor process before gathering the sorted subsequences
     if (rank == DISTRIBUTOR_RANK)
     {
         arr = realloc(arr, arr_size * sizeof(int));
@@ -162,6 +181,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Gather sorted local arrays from all processes to the distributor process using Gatherv
     result = MPI_Gatherv(local_arr, local_arr_size, MPI_INT, arr, send_counts, displs, MPI_INT, DISTRIBUTOR_RANK, MPI_COMM_WORLD);
     if (result != MPI_SUCCESS)
     {
@@ -169,17 +189,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Merge sorted subsequences in the distributor process
     if (rank == DISTRIBUTOR_RANK)
     {
         mergeSortedSubsequences(arr, num_workers, arr_size, send_counts, displs);
 
+        // Check if the final array is sorted correctly
         if (validateSort(arr, arr_size))
             printf("The array is sorted correctly.\n");
         else
             printf("The array is not sorted correctly.\n");
 
-        // printArray(arr, arr_size);
-
+        // Free memory for arrays used in the distributor process
         free(arr);
         free(send_counts);
         free(displs);
