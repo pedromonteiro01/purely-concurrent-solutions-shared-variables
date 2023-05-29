@@ -19,63 +19,47 @@
 #ifndef MATRIX_DIMENSION
 # define MATRIX_DIMENSION 1024
 #endif
-#ifndef SECTOR_SIZE
-# define SECTOR_SIZE  1024
-#endif
-#ifndef N_SECTORS
-# define N_SECTORS (MATRIX_DIMENSION * MATRIX_DIMENSION)
-#endif
 
 /* allusion to internal functions */
 
 static double get_delta_time(void);
 
-int validateSort(unsigned int *arr, int N);
 
-__device__ void merge(unsigned int *data, int start, int mid, int end, unsigned int *temp);
+__device__ void merge(int *data, int start, int mid, int end, unsigned int *temp);
 
-__global__ void mergeSortRowKernel(unsigned int *data, int N, int iter, unsigned int *temp);
+__global__ void mergeSortRowKernel(int *data, int N, int iter, unsigned int *temp);
 
-__global__ void mergeSortColumnKernel(unsigned int *data, int N, int iter, unsigned int *temp);
+/** \brief check if the array of integers has been sorted correctly */
+int validateSort(int *arr, int N);
 
 
-__device__ void merge(unsigned int *data, int start, int mid, int end, unsigned int *temp) {
-  int i = start;
-  int j = mid;
-  for (int k = start; k < end; k++) {
-      temp[k] = (i<mid && (j>=end || data[i] <= data[j])) ? data[i++] : data[j++];
-  }
-  for (int k = start; k < end; k++) {
-      data[k] = temp[k];
-  }
+__device__ void merge(int *data, int start, int mid, int end, unsigned int *temp) {
+    int i = start;
+    int j = mid;
+    for (int k = start; k < end; k++) {
+        temp[k] = (i<mid && (j>=end || data[i] <= data[j])) ? data[i++] : data[j++];
+    }
+    for (int k = start; k < end; k++) {
+        data[k] = temp[k];
+    }
 }
 
-__global__ void mergeSortRowKernel(unsigned int *data, int N, int iter, unsigned int *temp) {
+__global__ void mergeSortRowKernel(int *data, int iter, unsigned int *temp) {
+    int N = MATRIX_DIMENSION;
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int idx = blockDim.x * gridDim.x * y + x;
 
-    if (idx < (N >> iter)) {
-        int start = N * (1 << iter) * idx;
-        int mid = start + (1 << iter) * N / 2;
-        int end = start + (1 << iter) * N;
-        merge(data, start, mid, end, temp);
-    }
+    if(idx >= (N >> iter)) return;
+    
+    int start = N * (1 << iter) * idx;
+    int mid = start + (1 << iter) * N / 2;
+    int end = start + (1 << iter) * N;
+    merge(data, start, mid, end, temp);
+    
+    if (iter == 1)
+        printf("idx: %d, start: %d, mid: %d, end: %d, iter: %d, N: %d\n", idx, start, mid, end, iter, N);
 }
-
-__global__ void mergeSortColumnKernel(unsigned int *data, int N, int iter, unsigned int *temp) {
-    int x = threadIdx.x + blockDim.x * blockIdx.x;
-    int y = threadIdx.y + blockDim.y * blockIdx.y;
-    int idx = blockDim.x * gridDim.x * y + x;
-
-    if (idx < (N >> iter)) {
-        int start = (1 << iter) * idx;
-        int mid = start + ((1 << iter) * N / 2) % N + ((1 << iter) * N / 2) / N;
-        int end = start + (1 << iter) * N;
-        merge(data, start, mid, end, temp);
-    }
-}
-
 
 /**
  *   main program
@@ -101,13 +85,13 @@ int main (int argc, char **argv)
     int size = ftell(file) / sizeof(int);
     fseek(file, 0, SEEK_SET);
 
-    int *arr = (int*) malloc(size * sizeof(int));
-    if (arr == NULL) {
+    int *host_matrix = (int*) malloc(size * sizeof(int));
+    if (host_matrix == NULL) {
         printf("Error: cannot allocate memory\n");
         return 1;
     }
 
-    int count = fread(arr, sizeof(int), size, file);
+    int count = fread(host_matrix, sizeof(int), size, file);
 
     if (count != size) {
         printf("Error: could not read all integers from file\n");
@@ -115,16 +99,6 @@ int main (int argc, char **argv)
     }
 
     fclose(file);
-
-  // allocate memory for a 1024x1024 matrix on the host side
-  unsigned int *host_matrix = (unsigned int *)malloc(MATRIX_DIMENSION * MATRIX_DIMENSION * sizeof(unsigned int));
-
-  // Convert the 1D array into a 2D matrix
-  for (int i = 0; i < MATRIX_DIMENSION; i++) {
-    for (int j = 0; j < MATRIX_DIMENSION; j++) {
-        host_matrix[i * MATRIX_DIMENSION + j] = arr[i * MATRIX_DIMENSION + j];
-    }
-  }
 
 	/* set up the device */
 	int dev = 0;
@@ -135,7 +109,7 @@ int main (int argc, char **argv)
 	CHECK (cudaSetDevice (dev));
 
   /* copy the host data to the device memory */
-  unsigned int *device_matrix;
+  int *device_matrix;
   (void) get_delta_time ();
   CHECK(cudaMalloc((void**)&device_matrix, MATRIX_DIMENSION * MATRIX_DIMENSION * sizeof(unsigned int)));
   CHECK(cudaMemcpy(device_matrix, host_matrix, MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), cudaMemcpyHostToDevice));
@@ -143,27 +117,24 @@ int main (int argc, char **argv)
 		  MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), get_delta_time ());
 
   /* run the computational kernel
-	 as an example, N_SECTORS threads are launched where each thread deals with one sector */
+	 as an example, MATRIX_DIMENSION threads are launched where each thread deals with one subsequence */
 
     unsigned int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
-    int n_sectors;
-
-    n_sectors = N_SECTORS;
 
     // Number of threads in each dimension of a block
     blockDimX = 1 << 5;                                             // optimize!
-    blockDimY = 1 << 5;                                             // optimize!
+    blockDimY = 1 << 0;                                             // optimize!
     blockDimZ = 1 << 0;                                             // do not change!
 
     // Number of blocks in each dimension of the grid
     gridDimX = MATRIX_DIMENSION / blockDimX;
-    gridDimY = MATRIX_DIMENSION / blockDimY;
+    gridDimY = 1 << 0;
     gridDimZ = 1 << 0;                                              // do not change!
 
     dim3 grid (gridDimX, gridDimY, gridDimZ);
     dim3 block (blockDimX, blockDimY, blockDimZ);
 
-    if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != n_sectors)
+    if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != MATRIX_DIMENSION)
     { printf ("Wrong configuration!\n");
       return 1;
     }
@@ -174,9 +145,8 @@ int main (int argc, char **argv)
   CHECK(cudaMalloc((void**)&device_temp, MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION])));
 
   // Perform merge sort
-  for (int iter = 1, size = 1024; iter <= 10; iter++, size *= 2) {
-    printf("Iteration: %d, subseq_num: %d, subseq_len: %d\n", iter, MATRIX_DIMENSION*MATRIX_DIMENSION/size, size);
-    mergeSortRowKernel<<<grid, block>>>(device_matrix, size, size*2, device_temp);
+  for (int iter = 0; iter < 10; iter++) {
+    mergeSortRowKernel<<<grid, block>>>(device_matrix, iter, device_temp);
     CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
     CHECK (cudaGetLastError ());                                 // check for kernel errors
   }
@@ -185,7 +155,6 @@ int main (int argc, char **argv)
 		 gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, get_delta_time ());
 
   /* copy kernel result back to host side */
-
   CHECK (cudaMemcpy (host_matrix, device_matrix, MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), cudaMemcpyDeviceToHost));
   printf ("The transfer of %ld bytes from the device to the host took %.3e seconds\n",
 		  (long) MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), get_delta_time ());
@@ -217,7 +186,7 @@ static double get_delta_time(void)
   return (double)(t1.tv_sec - t0.tv_sec) + 1.0e-9 * (double)(t1.tv_nsec - t0.tv_nsec);
 }
 
-int validateSort(unsigned int *arr, int N)
+int validateSort(int *arr, int N)
 {
     int i;
 
