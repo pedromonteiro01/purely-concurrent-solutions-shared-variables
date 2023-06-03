@@ -17,34 +17,49 @@
  */
 
 #ifndef MATRIX_DIMENSION
-# define MATRIX_DIMENSION 1024
+# define MATRIX_DIMENSION 16
 #endif
 
 /* allusion to internal functions */
 
 static double get_delta_time(void);
 
+__device__ void merge(int *data, int start, int mid, int end, int *temp, int idx);
 
-__device__ void merge(int *data, int start, int mid, int end, unsigned int *temp);
-
-__global__ void mergeSortRowKernel(int *data, int N, int iter, unsigned int *temp);
+__global__ void mergeSortRowKernel(int *data, int N, int iter, int *temp);
 
 /** \brief check if the array of integers has been sorted correctly */
 int validateSort(int *arr, int N);
 
 
-__device__ void merge(int *data, int start, int mid, int end, unsigned int *temp) {
-    int i = start;
-    int j = mid;
-    for (int k = start; k < end; k++) {
-        temp[k] = (i<mid && (j>=end || data[i] <= data[j])) ? data[i++] : data[j++];
+__device__ void merge(int *data, int start, int mid, int end, int *temp, int idx) {
+  int i = start;
+  int j = mid;
+
+  if (idx == 0) {
+    printf("\n\n-------------DEBUG MERGE-------------\n\n");
+    for (int i = start; i < end; i++) {
+        printf("%d ", data[i]);
     }
-    for (int k = start; k < end; k++) {
-        data[k] = temp[k];
-    }
+    printf("\n");
+  }
+
+  for (int k = start; k < end; k++) {
+    if (idx == 0)
+      printf("k: %d, i: %d, j: %d, end: %d", k, i, j, end);
+    temp[k] = (i < mid && (j >= end || data[i] <= data[j])) ? data[i++] : data[j++];
+    if (idx == 0)
+      printf(" temp[k]: %d\n", temp[k]);
+  }
+  for (int k = start; k < end; k++) {
+      data[k] = temp[k];
+  }
+  if (idx == 0)
+    printf("\n\n-------------END DEBUG MERGE-------------\n\n");
 }
 
-__global__ void mergeSortRowKernel(int *data, int iter, unsigned int *temp) {
+
+__global__ void mergeRowKernel(int *data, int iter, int *temp) {
     int N = MATRIX_DIMENSION;
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -55,11 +70,47 @@ __global__ void mergeSortRowKernel(int *data, int iter, unsigned int *temp) {
     int start = N * (1 << iter) * idx;
     int mid = start + (1 << iter) * N / 2;
     int end = start + (1 << iter) * N;
-    merge(data, start, mid, end, temp);
+    merge(data, start, mid, end, temp, idx);
     
-    if (iter == 1)
+    if (iter == 0)
         printf("idx: %d, start: %d, mid: %d, end: %d, iter: %d, N: %d\n", idx, start, mid, end, iter, N);
+    
+    if (idx == 0) {
+      //print array
+      printf("array sorted by thread %d:\n", idx);
+      for (int i = start; i < end; i++) {
+          printf("%d ", data[i]);
+      }
+      printf("\n");
+  }
 }
+
+
+__global__ void mergeSortRowKernel(int *data, int iter, int *temp) {
+    int N = MATRIX_DIMENSION;
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int idx = blockDim.x * gridDim.x * y + x;
+
+    if(idx >= (N >> iter)) return;
+    
+    for (int curr_size=1; curr_size<=MATRIX_DIMENSION; curr_size = 2*curr_size) {
+      int start = idx*MATRIX_DIMENSION;
+      int mid = min(start + curr_size/2, MATRIX_DIMENSION*MATRIX_DIMENSION-1);
+      int end = min(start + curr_size, MATRIX_DIMENSION*MATRIX_DIMENSION-1);
+
+      if (idx == 0) {
+        printf("\n\n-------------DEBUG MERGESORT-------------\n\nidx: %d, start: %d, mid: %d, end: %d, iter: %d, N: %d\n", idx, start, mid, end, iter, N);
+        printf("array for thread %d:\n", idx);
+        for (int i = start; i < end; i++) {
+            printf("%d ", data[i]);
+        }
+        printf("\n\n-------------END DEBUG MERGESORT-------------\n\n");
+      }
+      merge(data, start, mid, end, temp, idx);
+    }
+}
+
 
 /**
  *   main program
@@ -111,18 +162,18 @@ int main (int argc, char **argv)
   /* copy the host data to the device memory */
   int *device_matrix;
   (void) get_delta_time ();
-  CHECK(cudaMalloc((void**)&device_matrix, MATRIX_DIMENSION * MATRIX_DIMENSION * sizeof(unsigned int)));
-  CHECK(cudaMemcpy(device_matrix, host_matrix, MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), cudaMemcpyHostToDevice));
+  CHECK(cudaMalloc((void**)&device_matrix, MATRIX_DIMENSION * MATRIX_DIMENSION * sizeof(int)));
+  CHECK(cudaMemcpy(device_matrix, host_matrix, MATRIX_DIMENSION * sizeof(int[MATRIX_DIMENSION]), cudaMemcpyHostToDevice));
   printf ("The transfer of %ld bytes from the host to the device took %.3e seconds\n",
-		  MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), get_delta_time ());
+		  MATRIX_DIMENSION * sizeof(int[MATRIX_DIMENSION]), get_delta_time ());
 
   /* run the computational kernel
 	 as an example, MATRIX_DIMENSION threads are launched where each thread deals with one subsequence */
 
-    unsigned int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
+    int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
 
     // Number of threads in each dimension of a block
-    blockDimX = 1 << 5;                                             // optimize!
+    blockDimX = 1 << 2;                                             // optimize!
     blockDimY = 1 << 0;                                             // optimize!
     blockDimZ = 1 << 0;                                             // do not change!
 
@@ -141,23 +192,24 @@ int main (int argc, char **argv)
   (void) get_delta_time ();
 
   // Initialize temporary array
-  unsigned int *device_temp;
-  CHECK(cudaMalloc((void**)&device_temp, MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION])));
+  int *device_temp;
+  CHECK(cudaMalloc((void**)&device_temp, MATRIX_DIMENSION * sizeof(int[MATRIX_DIMENSION])));
 
   // Perform merge sort
   for (int iter = 0; iter < 10; iter++) {
     mergeSortRowKernel<<<grid, block>>>(device_matrix, iter, device_temp);
     CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
     CHECK (cudaGetLastError ());                                 // check for kernel errors
+    break;
   }
 
   printf("The CUDA kernel <<<(%d,%d,%d), (%d,%d,%d)>>> took %.3e seconds to run\n",
 		 gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, get_delta_time ());
 
   /* copy kernel result back to host side */
-  CHECK (cudaMemcpy (host_matrix, device_matrix, MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), cudaMemcpyDeviceToHost));
+  CHECK (cudaMemcpy (host_matrix, device_matrix, MATRIX_DIMENSION * sizeof(int[MATRIX_DIMENSION]), cudaMemcpyDeviceToHost));
   printf ("The transfer of %ld bytes from the device to the host took %.3e seconds\n",
-		  (long) MATRIX_DIMENSION * sizeof(unsigned int[MATRIX_DIMENSION]), get_delta_time ());
+		  (long) MATRIX_DIMENSION * sizeof(int[MATRIX_DIMENSION]), get_delta_time ());
 
   /* free device global memory */
   CHECK (cudaFree (device_matrix));
