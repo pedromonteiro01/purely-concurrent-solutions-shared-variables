@@ -117,14 +117,15 @@ __global__ void processor(int *data, int iter) {
 	if(idx >= (N >> iter)) return;
 
 	int start = N * (1 << iter) * idx;
-	int mid = (start + (1 << iter) * N) / 2;
 	int end = start + (1 << iter) * N;
+	int mid = (start+end)/2;
 	int subseq_len = (1 << iter) * N;
 	int *subseq_start = data + start;
 	
 	if (iter ==0) {
 		mergeSort(subseq_start, subseq_len);
 	} else {
+		printf("start: %d, mid: %d, end: %d\n", start, mid, end);
 		merge(data, start, mid-1, end-1);
 	}
 }
