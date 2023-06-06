@@ -125,7 +125,7 @@ __global__ void processor(int *data, int iter) {
 	if (iter ==0) {
 		mergeSort(subseq_start, subseq_len);
 	} else {
-		merge(data, start, mid, end);
+		merge(data, start, mid-1, end-1);
 	}
 }
 
