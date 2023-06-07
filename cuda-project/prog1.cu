@@ -22,11 +22,24 @@
 
 /* allusion to internal functions */
 
+/* returns the number of seconds elapsed between the two specified times */
 static double get_delta_time(void);
+
+/* returns 1 if the specified array is sorted, and 0 otherwise */
 int validateSort(int *arr, int N);
+
+/* Function to merge two haves of array */
 __device__ void merge(int arr[], int l, int m, int r);
+
+/* Iterative mergesort */
 __device__ void mergeSort(int arr[], int n);
+
+/* kernel function */
 __global__ void processor(int *data, int iter);
+
+
+/* -------------------------- */
+
 
 /* Function to merge the two haves of array*/
 __device__ void merge(int arr[], int l, int m, int r)
@@ -105,10 +118,7 @@ __global__ void processor(int *data, int iter) {
 	int subseq_len = (1 << iter) * N;
 	int *subseq_start = data + start;
 
-	if (iter ==0)
-		mergeSort(subseq_start, subseq_len);
-	else
-		merge(data, start, mid-1, end-1);
+	(iter == 0) ? mergeSort(subseq_start, subseq_len) : merge(data, start, mid-1, end-1);
 }
 
 

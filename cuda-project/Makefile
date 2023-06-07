@@ -1,4 +1,4 @@
-CU_APPS=main
+CU_APPS=prog1
 
 all: ${CU_APPS}
 
