@@ -244,17 +244,18 @@ static double get_delta_time(void)
 }
 
 int validateSort(int *arr, int N) {
-	int i;
+    int i;
 
-	for (i = 0; i < N - 1; i++)
-	{
-		if (arr[i] > arr[i + 1])
-		{
-			printf("Error in position %d between element %d and %d\n", i, arr[i], arr[i + 1]);
-			return 0;
-		}
-	}
-	printf("Everything is OK!\n");
+    for (i = 0; i < N - 1; i++)
+    {
+        if (arr[i] > arr[i + 1])
+        {
+            printf("Error in position %d between element %d and %d\n", i, arr[i], arr[i + 1]);
+            return 0;
+        }
+    }
+	if (i == (N - 1))
+		printf("Everything is OK!\n");
 
-	return 1;
+    return 1;
 }
