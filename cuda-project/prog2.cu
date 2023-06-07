@@ -1,7 +1,7 @@
 /**
- *  \file prog1.cu
+ *  \file prog2.cu
  *
- *  \brief Problem name: Int Sort Row processing.
+ *  \brief Problem name: Int Sort Column processing.
  *
  *  \authors Pedro Monteiro & José Trigo - June 2023
  */
@@ -28,84 +28,101 @@
 static double get_delta_time(void);
 
 /* returns 1 if the specified array is sorted, and 0 otherwise */
-int validateSort(int *arr, int N);
+int validateSort(int *arr);
 
 /* Function to merge two haves of array */
-__device__ void merge(int A[], int temp[], int from, int mid, int to);
+__device__ void merge(int arr[], int l, int m, int r, int idx, int iter);
 
 /* Iterative mergesort */
-__device__ void mergeSort(int array[], int temp[], int size);
+__device__ void mergeSort(int array[], int size, int idx, int iter);
 
 /* kernel function */
-__global__ void processor(int *data, int *temp, int iter);
-
+__global__ void processor(int *data, int iter);
 
 /**
  *  \brief Function merge.
  *
- *  This function merges two sorted subarrays into a single sorted subarray.
+ *  This function merges two sorted subarrays into a single sorted subarray within the device memory.
  *
- *  \param arr: pointer to the array containing the subarrays
+ *  \param arr: pointer to the device array containing the subarrays
  *  \param l: starting index of the first subarray
  *  \param m: ending index of the first subarray and starting index of the second subarray
  *  \param r: ending index of the second subarray
+ *  \param idx: index of the thread within the GPU grid
+ *  \param iter: iteration number indicating the level of merge sort
  *
- *  The function creates temporary arrays to store the subarrays and then merges them into the original 
- *  array in a sorted order.
  */
-```c
-// Merge two sorted subarrays `A[from…mid]` and `A[mid+1…to]`
-__device__ void merge(int A[], int temp[], int from, int mid, int to)
+__device__ void merge(int arr[], int l, int m, int r, int idx, int iter)
 {
-    int k = from, i = from, j = mid + 1;
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 =  r - m;
+
+    int *L = (int*)malloc(n1 * sizeof(int));
+    int *R = (int*)malloc(n2 * sizeof(int));
  
-    // loop till no elements are left in the left and right runs
-    while (i <= mid && j <= to)
-    {
-        if (A[i] < A[j]) {
-            temp[k++] = A[i++];
+    // Copy data to temp arrays
+    for (i = 0; i < n1; i++)
+        L[i] = arr[(1 << iter) * idx + DIM * ((l + i) % DIM) + ((l + i) / DIM)];
+        // i - [ (i >> log2(N)) << log2(N) ]
+
+    for (j = 0; j < n2; j++)
+        R[j] = arr[(1 << iter) * idx + DIM * ((m + 1+ j) % DIM) + ((m + 1+ j) / DIM)];
+ 
+    // Merge temp arrays into arr
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[(1 << iter) * idx + DIM * ((k) % DIM) + ((k) / DIM)] = L[i];
+            i++;
+        } else {
+            arr[(1 << iter) * idx + DIM * ((k) % DIM) + ((k) / DIM)] = R[j];
+            j++;
         }
-        else {
-            temp[k++] = A[j++];
-        }
+        k++;
+    }
+
+    // Copy remaining elements of L[]
+    while (i < n1) {
+        arr[(1 << iter) * idx + DIM * ((k) % DIM) + ((k) / DIM)] = L[i];
+        i++;
+        k++;
     }
  
-    // copy remaining elements
-    while (i < N && i <= mid) {
-        temp[k++] = A[i++];
+    // Copy remaining elements of R[]
+    while (j < n2) {
+        arr[(1 << iter) * idx + DIM * ((k) % DIM) + ((k) / DIM)] = R[j];
+        j++;
+        k++;
     }
- 
-    /* no need to copy the second half (since the remaining items
-       are already in their correct position in the temporary array) */
- 
-    // copy back to the original array to reflect sorted order
-    for (int i = from; i <= to; i++) {
-        A[i] = temp[i];
-    }
+
+    free(L);
+    free(R);
 }
-```
 
 /**
  *  \brief Function mergeSort.
  *
- *  This function sorts an array using the merge sort algorithm.
+ *  This function performs merge sort on a subarray within the device memory.
  *
- *  \param array: pointer to the array to be sorted
- *  \param size: size of the array
+ *  \param array: pointer to the device array to be sorted
+ *  \param size: size of the subarray
+ *  \param idx: index of the thread within the GPU grid
+ *  \param iter: iteration number indicating the level of merge sort
  *
- *  The function divides the array into smaller subarrays and recursively sorts them using merge sort. 
- *  It then merges the sorted subarrays to obtain the final sorted array.
  */
-__device__ void mergeSort(int array[], int temp[], int size) {
+__device__ void mergeSort(int array[], int size, int idx, int iter) {
    int currentSize, leftStart;
-	
-	for (currentSize = 1; currentSize <= size - 1; currentSize = 2 * currentSize) {
-		for (leftStart = 0; leftStart < size - 1; leftStart += 2 * currentSize) {
+    
+    for (currentSize = 1; currentSize <= size - 1; currentSize = 2 * currentSize) {
+        for (leftStart = 0; leftStart < size - 1; leftStart += 2 * currentSize) {
            int middle = min(leftStart + currentSize - 1, size - 1);
            int rightEnd = min(leftStart + 2 * currentSize - 1, size - 1);
-           merge(array, temp, leftStart, middle, rightEnd);
-       	}
-   	}
+           merge(array, leftStart, middle, rightEnd, idx, iter);
+           }
+       }
 }
 
 /**
@@ -116,12 +133,8 @@ __device__ void mergeSort(int array[], int temp[], int size) {
  *  \param data: pointer to the input array
  *  \param iter: iteration number indicating the level of merge sort
  *
- *  The function divides the input array into subsequences and sorts them using merge sort.
- *  Each thread is responsible for sorting a specific subsequence.
- *  In each iteration, the function performs either an independent merge sort on a subsequence (when iter is 0) 
- *  or merges two previously sorted subsequences.
  */
-__global__ void processor(int *data, int *temp, int iter) {
+__global__ void processor(int *data, int iter) {
 	int N = DIM;
 	int x = threadIdx.x + blockDim.x * blockIdx.x;
 	int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -129,13 +142,12 @@ __global__ void processor(int *data, int *temp, int iter) {
 
 	if(idx >= (N >> iter)) return;
 
-	int start = N * (1 << iter) * idx;
+	int start = 0;
 	int end = start + (1 << iter) * N;
 	int mid = (start+end)/2;
 	int subseq_len = (1 << iter) * N;
-	int *subseq_start = data + start;
-
-	(iter == 0) ? mergeSort(subseq_start, temp, subseq_len) : merge(data, temp, start, mid-1, end-1);
+	
+	(iter == 0) ? mergeSort(data, subseq_len, idx, iter) : merge(data, start, mid-1, end-1, idx, iter);
 }
 
 
@@ -152,12 +164,14 @@ __global__ void processor(int *data, int *temp, int iter) {
  */
 int main (int argc, char **argv)
 {
+	printf("%s Starting...\n", argv[0]);
+
 	if (argc != 2) {
 		printf("Usage: %s <filename>\n", argv[0]);
 		return 1;
 	}
 
-	/* Open the file for reading */
+	// Open the file for reading
 
 	FILE *file = fopen(argv[1], "rb");
 	if (file == NULL) {
@@ -184,9 +198,7 @@ int main (int argc, char **argv)
 
 	fclose(file);
 
-
 	/* set up the device */
-
 	int dev = 0;
 
 	cudaDeviceProp deviceProp;
@@ -196,11 +208,12 @@ int main (int argc, char **argv)
 
 	/* copy the host data to the device memory */
 	int *device_matrix;
+	(void) get_delta_time ();
 	CHECK(cudaMalloc((void**)&device_matrix, DIM * DIM * sizeof(int)));
 	CHECK(cudaMemcpy(device_matrix, host_matrix, DIM * sizeof(int[DIM]), cudaMemcpyHostToDevice));
 
-
-	/* launch the kernel */
+  	/* run the computational kernel
+	 as an example, DIM threads are launched where each thread deals with one subsequence */
 
 	int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
 
@@ -210,39 +223,32 @@ int main (int argc, char **argv)
 	blockDimZ = 1 << 0;                                             // do not change!
 
 	// Number of blocks in each dimension of the grid
-	gridDimX = DIM / (blockDimX*blockDimY*blockDimZ);
+	gridDimX = DIM / blockDimX;
 	gridDimY = 1 << 0;
 	gridDimZ = 1 << 0;                                              // do not change!
 
 	dim3 grid (gridDimX, gridDimY, gridDimZ);
 	dim3 block (blockDimX, blockDimY, blockDimZ);
 
-	if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != DIM) {
-		printf ("Wrong configuration!\n");
-		printf("blockDimX = %d, blockDimY = %d, blockDimZ = %d\n", blockDimX, blockDimY, blockDimZ);
-		printf("gridDimX = %d, gridDimY = %d, gridDimZ = %d\n", gridDimX, gridDimY, gridDimZ);
-		return 1;
+	if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != DIM)
+	{ printf ("Wrong configuration!\n");
+	  return 1;
 	}
+  	(void) get_delta_time ();
 
 	// Perform merge sort
-	(void) get_delta_time ();
-
-	for (int iter = 0; iter < 10; iter++) {
-		processor<<<grid, block>>>(device_matrix, temp, iter);
+	for (int iter = 0; iter < 11; iter++) {  // Adjusted iteration count to 4
+		processor<<<grid, block>>>(device_matrix, iter);
 
 		blockDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
-		gridDimX = DIM / blockDimX;
 		dim3 block (blockDimX, blockDimY, blockDimZ);
-		dim3 grid (gridDimX, gridDimY, gridDimZ);
 
 		CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
 		CHECK (cudaGetLastError ());                                 // check for kernel errors
-	}
+		CHECK (cudaMemcpy (host_matrix, device_matrix, DIM * sizeof(int[DIM]), cudaMemcpyDeviceToHost));
+		//print array
 
-	// Process one more iteration to merge the two halves (without updating the grid and block dimensions)
-	processor<<<grid, block>>>(device_matrix, temp, 10);
-	CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
-	CHECK (cudaGetLastError ());                                 // check for kernel errors
+	}
 
 	printf("The CUDA kernel <<<(%d,%d,%d), (%d,%d,%d)>>> took %.3e seconds to run\n",
 			gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, get_delta_time ());
@@ -252,14 +258,13 @@ int main (int argc, char **argv)
 
 	/* free device global memory */
 	CHECK (cudaFree (device_matrix));
-	CHECK (cudaFree (device_matrix));
 
 	/* reset the device */
 	CHECK (cudaDeviceReset ());
 
 	// validate if the array is sorted correctly
-	validateSort(host_matrix, DIM*DIM);
-	free(host_matrix);
+	validateSort(host_matrix);
+
 	return 0;
 }
 
@@ -288,25 +293,34 @@ static double get_delta_time(void)
 /**
  *  \brief Validate Sort.
  *
- *  This function checks if an array is sorted in ascending order.
+ *  This function checks if a square matrix is sorted column-wise in ascending order.
  *
- *  \param arr: pointer to the array to be validated
- *  \param N: size of the array
+ *  \param arr: pointer to the array representing the square matrix
+ *
+ *  The function iterates through each column of the matrix and compares each element with the element below it.
  *
  */
-int validateSort(int *arr, int N) {
-    int i;
+int validateSort(int *arr){
+    int N = 1024;
 
-    for (i = 0; i < N - 1; i++)
-    {
-        if (arr[i] > arr[i + 1])
-        {
-            printf("Error in position %d between element %d and %d\n", i, arr[i], arr[i + 1]);
-            return 0;
+    for(int i=0; i < N; i++ ){
+      for(int j=0; j < N-1; j++ ){
+        if( arr[j*N+i] > arr[(j+1)*N+i] ){
+          printf("Error in position %d between element %d and %d\n", i+j*N, arr[i+j*N], arr[(j+1)*N+i]);
+          return 1;
         }
-    }
-	if (i == (N - 1))
-		printf("Everything is OK!\n");
+      }
 
-    return 1;
+      if(i == N-1){
+        printf ("Everything is OK!\n");
+        return 0;
+        }
+
+      if( arr[(N-1)*N+i] > arr[i+1] ){
+        printf("Error in position %d between element %d and %d\n",(N-1)*N+i, arr[(N-1)*N+i],arr[i+1]);
+        return 1;
+      }
+    }
+
+    return 0;
 }
