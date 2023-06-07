@@ -23,15 +23,10 @@
 /* allusion to internal functions */
 
 static double get_delta_time(void);
-
+int validateSort(int *arr, int N);
 __device__ void merge(int arr[], int l, int m, int r);
 __device__ void mergeSort(int arr[], int n);
 __global__ void processor(int *data, int iter);
-
-
-/** \brief check if the array of integers has been sorted correctly */
-int validateSort(int *arr, int N);
-
 
 /* Function to merge the two haves of array*/
 __device__ void merge(int arr[], int l, int m, int r)
@@ -109,7 +104,7 @@ __global__ void processor(int *data, int iter) {
 	int mid = (start+end)/2;
 	int subseq_len = (1 << iter) * N;
 	int *subseq_start = data + start;
-	
+
 	if (iter ==0)
 		mergeSort(subseq_start, subseq_len);
 	else
@@ -180,16 +175,18 @@ int main (int argc, char **argv)
 	blockDimZ = 1 << 0;                                             // do not change!
 
 	// Number of blocks in each dimension of the grid
-	gridDimX = DIM / blockDimX;
+	gridDimX = DIM / (blockDimX*blockDimY*blockDimZ);
 	gridDimY = 1 << 0;
 	gridDimZ = 1 << 0;                                              // do not change!
 
 	dim3 grid (gridDimX, gridDimY, gridDimZ);
 	dim3 block (blockDimX, blockDimY, blockDimZ);
 
-	if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != DIM)
-	{ printf ("Wrong configuration!\n");
-	  return 1;
+	if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != DIM) {
+		printf ("Wrong configuration!\n");
+		printf("blockDimX = %d, blockDimY = %d, blockDimZ = %d\n", blockDimX, blockDimY, blockDimZ);
+		printf("gridDimX = %d, gridDimY = %d, gridDimZ = %d\n", gridDimX, gridDimY, gridDimZ);
+		return 1;
 	}
 
 	// Perform merge sort
@@ -226,7 +223,7 @@ int main (int argc, char **argv)
 
 	// validate if the array is sorted correctly
 	validateSort(host_matrix, DIM*DIM);
-
+	free(host_matrix);
 	return 0;
 }
 
