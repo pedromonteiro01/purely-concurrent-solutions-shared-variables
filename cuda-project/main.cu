@@ -17,7 +17,7 @@
  */
 
 #ifndef DIM
-# define DIM 8
+# define DIM 1024
 #endif
 
 /* allusion to internal functions */
@@ -41,7 +41,8 @@ __device__ void merge(int arr[], int l, int m, int r)
     int n2 =  r - m;
 
     /* create temp arrays */
-    int L[(DIM*DIM)/2], R[(DIM*DIM)/2];
+	int *L = (int*)malloc(n1 * sizeof(int));
+	int *R = (int*)malloc(n2 * sizeof(int));
  
     /* Copy data to temp arrays L[] and R[] */
     for (i = 0; i < n1; i++)
@@ -83,6 +84,9 @@ __device__ void merge(int arr[], int l, int m, int r)
         j++;
         k++;
     }
+
+	free(L);
+	free(R);
 }
 
 __device__ void mergeSort(int arr[], int n)
@@ -125,7 +129,8 @@ __global__ void processor(int *data, int iter) {
 	if (iter ==0) {
 		mergeSort(subseq_start, subseq_len);
 	} else {
-		printf("start: %d, mid: %d, end: %d\n", start, mid, end);
+		if (idx == 0)
+			printf("iter: %d, start: %d, mid: %d, end: %d\n", iter, start, mid, end);
 		merge(data, start, mid-1, end-1);
 	}
 }
@@ -145,7 +150,6 @@ int main (int argc, char **argv)
 	}
 
 	// Open the file for reading
-	/*
 	FILE *file = fopen(argv[1], "rb");
 	if (file == NULL) {
 		printf("Failed to open file: %s\n", argv[1]);
@@ -164,21 +168,13 @@ int main (int argc, char **argv)
 
 	int count = fread(host_matrix, sizeof(int), size, file);
 
-
-
 	if (count != size) {
 		printf("Error: could not read all integers from file\n");
 		return 1;
 	}
 
 	fclose(file);
-	*/
 
-	// generate array of 64 random integers
-	int *host_matrix = (int*) malloc(DIM*DIM * sizeof(int));
-	srand(123);
-	for (int i = 0; i < 64; i++)
-		host_matrix[i] = rand() % 100;
 
 	/* set up the device */
 	int dev = 0;
@@ -202,7 +198,7 @@ int main (int argc, char **argv)
 	int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
 
 	// Number of threads in each dimension of a block
-	blockDimX = 1 << 3;                                             // optimize!
+	blockDimX = 1 << 10;                                             // optimize!
 	blockDimY = 1 << 0;                                             // optimize!
 	blockDimZ = 1 << 0;                                             // do not change!
 
@@ -221,20 +217,18 @@ int main (int argc, char **argv)
   	(void) get_delta_time ();
 
 	// Perform merge sort
-	for (int iter = 0; iter < 4; iter++) {  // Adjusted iteration count to 4
+	for (int iter = 0; iter < 11; iter++) {
 		processor<<<grid, block>>>(device_matrix, iter);
 
-		blockDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
-		dim3 block (blockDimX, blockDimY, blockDimZ);
+		if (iter < 10) {
+			blockDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
+			gridDimX = DIM / blockDimX;
+			dim3 block (blockDimX, blockDimY, blockDimZ);
+			dim3 grid (gridDimX, gridDimY, gridDimZ);
+		}
 
 		CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
 		CHECK (cudaGetLastError ());                                 // check for kernel errors
-		CHECK (cudaMemcpy (host_matrix, device_matrix, DIM * sizeof(int[DIM]), cudaMemcpyDeviceToHost));
-		//print array
-		printf("Iteration %d: ", iter);
-		for (int i = 0; i < DIM*(iter+1); i++)
-			printf("%d ", host_matrix[i]);
-		printf("\n");
 	}
 
 	printf("The CUDA kernel <<<(%d,%d,%d), (%d,%d,%d)>>> took %.3e seconds to run\n",
@@ -252,8 +246,8 @@ int main (int argc, char **argv)
 	CHECK (cudaDeviceReset ());
 
 	//print array
-	for (int i = 0; i < DIM*DIM; i++)
-		printf("%d ", host_matrix[i]);
+	//for (int i = 0; i < DIM*DIM; i++)
+	//	printf("%d ", host_matrix[i]);
 
 	// validate if the array is sorted correctly
 	validateSort(host_matrix, DIM*DIM);
