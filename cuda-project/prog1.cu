@@ -1,9 +1,15 @@
 /**
- *  \file prog1.cu
+ *  \file prog1.cu (implementation file)
  *
- *  \brief Problem name: Int Sort Row processing.
+ *  \brief Problem name: Producers / Consumers.
  *
- *  \authors Pedro Monteiro & José Trigo - June 2023
+ *  Synchronization based on monitors.
+ *  Both threads and the monitor are implemented using the pthread library which enables the creation of a
+ *  monitor of Lampson / Redell type.
+ *
+ *  Generator thread of the intervening entities.
+ *
+ *  \author António Rui Borges - March 2023
  */
 
 #include <time.h>
@@ -31,13 +37,13 @@ static double get_delta_time(void);
 int validateSort(int *arr, int N);
 
 /* Function to merge two haves of array */
-__device__ void merge(int A[], int temp[], int from, int mid, int to);
+__device__ void merge(int arr[], int l, int m, int r);
 
 /* Iterative mergesort */
-__device__ void mergeSort(int array[], int temp[], int size);
+__device__ void mergeSort(int arr[], int n);
 
 /* kernel function */
-__global__ void processor(int *data, int *temp, int iter);
+__global__ void processor(int *data, int iter);
 
 
 /**
@@ -53,37 +59,53 @@ __global__ void processor(int *data, int *temp, int iter);
  *  The function creates temporary arrays to store the subarrays and then merges them into the original 
  *  array in a sorted order.
  */
-```c
-// Merge two sorted subarrays `A[from…mid]` and `A[mid+1…to]`
-__device__ void merge(int A[], int temp[], int from, int mid, int to)
+__device__ void merge(int arr[], int l, int m, int r)
 {
-    int k = from, i = from, j = mid + 1;
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 =  r - m;
+
+	int *L = (int*)malloc(n1 * sizeof(int));
+	int *R = (int*)malloc(n2 * sizeof(int));
  
-    // loop till no elements are left in the left and right runs
-    while (i <= mid && j <= to)
-    {
-        if (A[i] < A[j]) {
-            temp[k++] = A[i++];
+    // Copy data to temp arrays
+    for (i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = arr[m + 1+ j];
+ 
+    // Merge temp arrays into arr
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
         }
-        else {
-            temp[k++] = A[j++];
-        }
+        k++;
     }
  
-    // copy remaining elements
-    while (i < N && i <= mid) {
-        temp[k++] = A[i++];
+    // Copy remaining elements of L[]
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
     }
  
-    /* no need to copy the second half (since the remaining items
-       are already in their correct position in the temporary array) */
- 
-    // copy back to the original array to reflect sorted order
-    for (int i = from; i <= to; i++) {
-        A[i] = temp[i];
+    // Copy remaining elements of R[]
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
     }
+
+	free(L);
+	free(R);
 }
-```
 
 /**
  *  \brief Function mergeSort.
@@ -96,14 +118,14 @@ __device__ void merge(int A[], int temp[], int from, int mid, int to)
  *  The function divides the array into smaller subarrays and recursively sorts them using merge sort. 
  *  It then merges the sorted subarrays to obtain the final sorted array.
  */
-__device__ void mergeSort(int array[], int temp[], int size) {
+__device__ void mergeSort(int array[], int size) {
    int currentSize, leftStart;
 	
 	for (currentSize = 1; currentSize <= size - 1; currentSize = 2 * currentSize) {
 		for (leftStart = 0; leftStart < size - 1; leftStart += 2 * currentSize) {
            int middle = min(leftStart + currentSize - 1, size - 1);
            int rightEnd = min(leftStart + 2 * currentSize - 1, size - 1);
-           merge(array, temp, leftStart, middle, rightEnd);
+           merge(array, leftStart, middle, rightEnd);
        	}
    	}
 }
@@ -121,7 +143,7 @@ __device__ void mergeSort(int array[], int temp[], int size) {
  *  In each iteration, the function performs either an independent merge sort on a subsequence (when iter is 0) 
  *  or merges two previously sorted subsequences.
  */
-__global__ void processor(int *data, int *temp, int iter) {
+__global__ void processor(int *data, int iter) {
 	int N = DIM;
 	int x = threadIdx.x + blockDim.x * blockIdx.x;
 	int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -135,7 +157,7 @@ __global__ void processor(int *data, int *temp, int iter) {
 	int subseq_len = (1 << iter) * N;
 	int *subseq_start = data + start;
 
-	(iter == 0) ? mergeSort(subseq_start, temp, subseq_len) : merge(data, temp, start, mid-1, end-1);
+	(iter == 0) ? mergeSort(subseq_start, subseq_len) : merge(data, start, mid-1, end-1);
 }
 
 
@@ -147,7 +169,7 @@ __global__ void processor(int *data, int *temp, int iter) {
  *  \param argc: number of command-line arguments
  *  \param argv: array of command-line argument strings
  *
- *  The function reads an input file containing integers, performs merge sort using CUDA, 
+ *  The function reads an input file containing integers, performs parallel merge sort using CUDA, 
  *  and validates the sorted array.
  */
 int main (int argc, char **argv)
@@ -205,13 +227,13 @@ int main (int argc, char **argv)
 	int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
 
 	// Number of threads in each dimension of a block
-	blockDimX = 1 << 10;                                             // optimize!
+	blockDimX = 1 << 0;                                             // optimize!
 	blockDimY = 1 << 0;                                             // optimize!
 	blockDimZ = 1 << 0;                                             // do not change!
 
 	// Number of blocks in each dimension of the grid
-	gridDimX = DIM / (blockDimX*blockDimY*blockDimZ);
-	gridDimY = 1 << 0;
+	gridDimX = 1 << 10;												// optimize!
+	gridDimY = 1 << 0;												// optimize!
 	gridDimZ = 1 << 0;                                              // do not change!
 
 	dim3 grid (gridDimX, gridDimY, gridDimZ);
@@ -228,19 +250,18 @@ int main (int argc, char **argv)
 	(void) get_delta_time ();
 
 	for (int iter = 0; iter < 10; iter++) {
-		processor<<<grid, block>>>(device_matrix, temp, iter);
-
+		processor<<<grid, block>>>(device_matrix, iter);
 		blockDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
-		gridDimX = DIM / blockDimX;
 		dim3 block (blockDimX, blockDimY, blockDimZ);
-		dim3 grid (gridDimX, gridDimY, gridDimZ);
 
 		CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
 		CHECK (cudaGetLastError ());                                 // check for kernel errors
 	}
 
 	// Process one more iteration to merge the two halves (without updating the grid and block dimensions)
-	processor<<<grid, block>>>(device_matrix, temp, 10);
+	processor<<<grid, block>>>(device_matrix, 10);
+
+	
 	CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
 	CHECK (cudaGetLastError ());                                 // check for kernel errors
 
@@ -251,7 +272,6 @@ int main (int argc, char **argv)
 	CHECK (cudaMemcpy (host_matrix, device_matrix, DIM * sizeof(int[DIM]), cudaMemcpyDeviceToHost));
 
 	/* free device global memory */
-	CHECK (cudaFree (device_matrix));
 	CHECK (cudaFree (device_matrix));
 
 	/* reset the device */

@@ -164,14 +164,12 @@ __global__ void processor(int *data, int iter) {
  */
 int main (int argc, char **argv)
 {
-	printf("%s Starting...\n", argv[0]);
-
 	if (argc != 2) {
 		printf("Usage: %s <filename>\n", argv[0]);
 		return 1;
 	}
 
-	// Open the file for reading
+	/* Open the file for reading */
 
 	FILE *file = fopen(argv[1], "rb");
 	if (file == NULL) {
@@ -208,47 +206,51 @@ int main (int argc, char **argv)
 
 	/* copy the host data to the device memory */
 	int *device_matrix;
-	(void) get_delta_time ();
 	CHECK(cudaMalloc((void**)&device_matrix, DIM * DIM * sizeof(int)));
 	CHECK(cudaMemcpy(device_matrix, host_matrix, DIM * sizeof(int[DIM]), cudaMemcpyHostToDevice));
 
-  	/* run the computational kernel
-	 as an example, DIM threads are launched where each thread deals with one subsequence */
+	/* launch the kernel */
 
 	int gridDimX,gridDimY,gridDimZ,blockDimX,blockDimY,blockDimZ;
 
 	// Number of threads in each dimension of a block
-	blockDimX = 1 << 10;                                             // optimize!
+	blockDimX = 1 << 0;                                             // optimize!
 	blockDimY = 1 << 0;                                             // optimize!
 	blockDimZ = 1 << 0;                                             // do not change!
 
 	// Number of blocks in each dimension of the grid
-	gridDimX = DIM / blockDimX;
-	gridDimY = 1 << 0;
+	gridDimX = 1 << 10;												// optimize!
+	gridDimY = 1 << 0;												// optimize!
 	gridDimZ = 1 << 0;                                              // do not change!
 
 	dim3 grid (gridDimX, gridDimY, gridDimZ);
 	dim3 block (blockDimX, blockDimY, blockDimZ);
 
-	if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != DIM)
-	{ printf ("Wrong configuration!\n");
-	  return 1;
+	if ((gridDimX * gridDimY * gridDimZ * blockDimX * blockDimY * blockDimZ) != DIM) {
+		printf ("Wrong configuration!\n");
+		printf("blockDimX = %d, blockDimY = %d, blockDimZ = %d\n", blockDimX, blockDimY, blockDimZ);
+		printf("gridDimX = %d, gridDimY = %d, gridDimZ = %d\n", gridDimX, gridDimY, gridDimZ);
+		return 1;
 	}
-  	(void) get_delta_time ();
 
 	// Perform merge sort
-	for (int iter = 0; iter < 11; iter++) {  // Adjusted iteration count to 4
-		processor<<<grid, block>>>(device_matrix, iter);
+	(void) get_delta_time ();
 
+	for (int iter = 0; iter < 10; iter++) {
+		processor<<<grid, block>>>(device_matrix, iter);
 		blockDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
 		dim3 block (blockDimX, blockDimY, blockDimZ);
 
 		CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
 		CHECK (cudaGetLastError ());                                 // check for kernel errors
-		CHECK (cudaMemcpy (host_matrix, device_matrix, DIM * sizeof(int[DIM]), cudaMemcpyDeviceToHost));
-		//print array
-
 	}
+
+	// Process one more iteration to merge the two halves (without updating the grid and block dimensions)
+	processor<<<grid, block>>>(device_matrix, 10);
+
+
+	CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
+	CHECK (cudaGetLastError ());                                 // check for kernel errors
 
 	printf("The CUDA kernel <<<(%d,%d,%d), (%d,%d,%d)>>> took %.3e seconds to run\n",
 			gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, get_delta_time ());
@@ -264,7 +266,7 @@ int main (int argc, char **argv)
 
 	// validate if the array is sorted correctly
 	validateSort(host_matrix);
-
+	free(host_matrix);
 	return 0;
 }
 
