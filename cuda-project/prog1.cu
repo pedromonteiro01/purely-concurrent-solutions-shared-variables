@@ -1,15 +1,10 @@
 /**
  *  \file prog1.cu (implementation file)
  *
- *  \brief Problem name: Producers / Consumers.
+ *  \brief Problem name: Int Sort Row Processing.
  *
- *  Synchronization based on monitors.
- *  Both threads and the monitor are implemented using the pthread library which enables the creation of a
- *  monitor of Lampson / Redell type.
  *
- *  Generator thread of the intervening entities.
- *
- *  \author António Rui Borges - March 2023
+ *  \authors Pedro Monteiro & José Trigo - June 2023
  */
 
 #include <time.h>
