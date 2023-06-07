@@ -238,8 +238,8 @@ int main (int argc, char **argv)
 
 	for (int iter = 0; iter < 10; iter++) {
 		processor<<<grid, block>>>(device_matrix, iter);
-		blockDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
-		dim3 block (blockDimX, blockDimY, blockDimZ);
+		gridDimX = DIM / (1 << (iter + 1));  // Divides by 2 each iteration
+		dim3 grid (gridDimX, gridDimY, gridDimZ);
 
 		CHECK (cudaDeviceSynchronize ());                            // wait for kernel to finish
 		CHECK (cudaGetLastError ());                                 // check for kernel errors
